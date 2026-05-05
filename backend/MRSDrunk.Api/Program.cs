@@ -20,7 +20,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:9000", "http://127.0.0.1:9000")
+        policy.WithOrigins(
+                "http://localhost:5500",
+                "http://127.0.0.1:5500",
+                "http://localhost:9000",
+                "http://127.0.0.1:9000",
+                "https://keen-faun-14b72d.netlify.app")
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
