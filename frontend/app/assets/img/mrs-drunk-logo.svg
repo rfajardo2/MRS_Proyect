@@ -1,10 +1,26 @@
-<svg width="320" height="220" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="8" width="304" height="204" rx="28" fill="#050505" stroke="#ffffff" stroke-width="4"/>
-  <path d="M198 67c20 2 44 15 68 40" stroke="#ef233c" stroke-width="10" stroke-linecap="round"/>
-  <path d="M205 69l-51 55c-9 10-6 26 6 32l52 27" stroke="#ef233c" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="186" cy="73" r="22" fill="#ef233c"/>
-  <path d="M166 61c-18-16-38-8-46 8 17 2 33 4 46-8Z" fill="#ef233c"/>
-  <text x="34" y="93" fill="#fff8e8" font-family="Arial Black, Impact, sans-serif" font-size="45" letter-spacing="1">MRS.</text>
-  <text x="94" y="157" fill="#fff8e8" font-family="Arial Black, Impact, sans-serif" font-size="45" letter-spacing="1">DRUNK</text>
-  <text x="58" y="184" fill="#fff8e8" font-family="Arial, sans-serif" font-size="10">BEBE POR EL PRESENTE, BRINDA POR EL FUTURO</text>
+<svg width="720" height="410" viewBox="0 0 720 410" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="410" fill="#030303"/>
+  <rect x="1.5" y="1.5" width="717" height="407" stroke="#242424" stroke-width="3"/>
+
+  <g fill="#fff">
+    <text x="48" y="188" font-family="Impact, Arial Black, sans-serif" font-size="132" letter-spacing="2">MRS.</text>
+    <text x="292" y="331" font-family="Impact, Arial Black, sans-serif" font-size="132" letter-spacing="2">DRUNK</text>
+    <text x="32" y="379" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="800" letter-spacing="-1">
+      "BEBE POR EL PRESENTE, BRINDA POR EL FUTURO."
+    </text>
+  </g>
+
+  <g fill="#ff2a24">
+    <ellipse cx="374" cy="87" rx="45" ry="30"/>
+    <path d="M421 68l47-24 11 18-45 25z"/>
+    <path d="M464 53c23-3 41 8 54 27l-18 13c-10-17-21-25-35-23z"/>
+    <path d="M401 126l64 39h129c20 0 36 13 43 32H451l-83-52z"/>
+    <path d="M456 103l85 92h-59l-53-55z"/>
+    <path d="M552 187c82 0 137 26 150 83l-13 5c-16-43-61-63-137-63z"/>
+    <path d="M693 267l-24 28 8-36z"/>
+    <path d="M245 79c39-30 78-47 121-52-22 25-54 45-96 61z"/>
+  </g>
+
+  <path d="M285 70c29-24 57-38 86-43-17 21-40 39-68 54z" fill="#fff"/>
+  <path d="M415 57l46-24" stroke="#ff2a24" stroke-width="12" stroke-linecap="square"/>
 </svg>
