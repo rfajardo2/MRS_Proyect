@@ -19,6 +19,13 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<NominaPeriodo> NominaPeriodos => Set<NominaPeriodo>();
     public DbSet<NominaRegistro> NominaRegistros => Set<NominaRegistro>();
     public DbSet<NominaPeriodoDiaNoLaborado> NominaPeriodoDiasNoLaborados => Set<NominaPeriodoDiaNoLaborado>();
+    public DbSet<ConfiguracionVenta> ConfiguracionesVenta => Set<ConfiguracionVenta>();
+    public DbSet<ProductoCategoria> ProductoCategorias => Set<ProductoCategoria>();
+    public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<DiaOperativo> DiasOperativos => Set<DiaOperativo>();
+    public DbSet<Cuenta> Cuentas => Set<Cuenta>();
+    public DbSet<CuentaItem> CuentaItems => Set<CuentaItem>();
+    public DbSet<CuentaPago> CuentaPagos => Set<CuentaPago>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,5 +48,26 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<NominaRegistro>().Property(x => x.BaseCalculo).HasPrecision(18, 2);
         modelBuilder.Entity<NominaRegistro>().HasIndex(x => new { x.PeriodoId, x.EmpleadoId, x.Fecha, x.Concepto, x.CodigoNovedad }).IsUnique();
         modelBuilder.Entity<NominaPeriodoDiaNoLaborado>().HasIndex(x => new { x.PeriodoId, x.Fecha }).IsUnique();
+        modelBuilder.Entity<ConfiguracionVenta>().HasIndex(x => x.EmpresaId).IsUnique();
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.PorcentajeRepartoBase).HasPrecision(18, 4);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaCuatroPorMil).HasPrecision(18, 4);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaRetefuente).HasPrecision(18, 4);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaComisionDatafono).HasPrecision(18, 4);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaRetIca).HasPrecision(18, 4);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.ComisionFijaDatafono).HasPrecision(18, 2);
+        modelBuilder.Entity<ProductoCategoria>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+        modelBuilder.Entity<Producto>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+        modelBuilder.Entity<Producto>().Property(x => x.PrecioVenta).HasPrecision(18, 2);
+        modelBuilder.Entity<Producto>().Property(x => x.CostoEstimado).HasPrecision(18, 2);
+        modelBuilder.Entity<DiaOperativo>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.Fecha }).IsUnique();
+        modelBuilder.Entity<Cuenta>().HasIndex(x => new { x.EmpresaId, x.Numero }).IsUnique();
+        modelBuilder.Entity<Cuenta>().Property(x => x.Subtotal).HasPrecision(18, 2);
+        modelBuilder.Entity<Cuenta>().Property(x => x.Descuento).HasPrecision(18, 2);
+        modelBuilder.Entity<Cuenta>().Property(x => x.Total).HasPrecision(18, 2);
+        modelBuilder.Entity<CuentaItem>().Property(x => x.Cantidad).HasPrecision(18, 3);
+        modelBuilder.Entity<CuentaItem>().Property(x => x.PrecioUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<CuentaItem>().Property(x => x.Descuento).HasPrecision(18, 2);
+        modelBuilder.Entity<CuentaItem>().Property(x => x.Total).HasPrecision(18, 2);
+        modelBuilder.Entity<CuentaPago>().Property(x => x.Valor).HasPrecision(18, 2);
     }
 }

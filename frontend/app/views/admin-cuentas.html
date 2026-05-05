@@ -1,0 +1,32 @@
+<section class="page" ng-controller="AdminCuentasController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Administracion cuentas</span><h2>Cuentas de meseros</h2></div>
+  </div>
+
+  <div class="metric-grid">
+    <article class="metric" ng-repeat="b in vm.balance">
+      <span>{{b.mesero}}</span>
+      <strong>{{b.totalVendido | currency:'$':0}}</strong>
+      <small>{{b.cuentasAbiertas}} abiertas - {{b.cuentasCerradas}} cerradas</small>
+    </article>
+  </div>
+
+  <div class="panel">
+    <h3>Cuentas recientes</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Numero</th><th>Mesero</th><th>Mesa</th><th>Estado</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="cuenta in vm.cuentas">
+            <td>{{cuenta.numero}}</td><td>{{cuenta.mesero}}</td><td>{{cuenta.mesa}}</td><td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td><td>{{cuenta.total | currency:'$':0}}</td>
+            <td class="actions">
+              <button class="icon-btn" title="Aprobar" ng-if="cuenta.estado === 'PendienteAprobacion'" ng-click="vm.aprobar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-check"></i></button>
+              <button class="icon-btn" title="Rechazar" ng-if="cuenta.estado === 'PendienteAprobacion'" ng-click="vm.rechazar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-xmark"></i></button>
+              <button class="icon-btn" title="Anular" ng-click="vm.anular(cuenta)" ng-disabled="!vm.canDelete"><i class="fa-solid fa-ban"></i></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

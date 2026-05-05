@@ -1,0 +1,11 @@
+<section class="page" ng-controller="BalanceDiaController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Operacion</span><h2>Balance del dia</h2></div>
+  </div>
+  <div class="metric-grid" ng-if="vm.balance">
+    <article class="metric"><span>Cuentas abiertas</span><strong>{{vm.balance.cuentasAbiertas}}</strong></article>
+    <article class="metric"><span>Cuentas cerradas</span><strong>{{vm.balance.cuentasCerradas}}</strong></article>
+    <article class="metric"><span>Total vendido</span><strong>{{vm.balance.totalVendido | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Total pagado</span><strong>{{vm.balance.totalPagado | currency:'$':0}}</strong></article>
+  </div>
+</section>
