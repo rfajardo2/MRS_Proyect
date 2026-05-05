@@ -1,4 +1,6 @@
 /* Permiso especial para exportar Control diario de nomina. */
+USE MRSDrunkDb;
+GO
 
 IF NOT EXISTS (SELECT 1 FROM Permisos WHERE Codigo = 'Nomina.Control.Exportar')
     INSERT INTO Permisos (Codigo, Nombre, Descripcion, Estado)
