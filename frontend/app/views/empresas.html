@@ -1,18 +1,27 @@
 <section class="page" ng-controller="EmpresasController as vm">
   <div class="page-title">
     <div><span class="eyebrow">Configuracion</span><h2>Empresas</h2></div>
-    <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
-      <button class="btn primary" ng-click="vm.new()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-building-circle-plus"></i><span>Nueva Empresa</span></button>
-    </span>
+    <div class="actions">
+      <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+        <button class="btn ghost" ng-click="vm.newSucursal()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-store"></i><span>Nueva sede</span></button>
+      </span>
+      <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+        <button class="btn primary" ng-click="vm.new()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-building-circle-plus"></i><span>Nueva Empresa</span></button>
+      </span>
+    </div>
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Nombre</th><th>NIT</th><th>Logo</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Nombre</th><th>Razon social</th><th>NIT</th><th>Regimen</th><th>Municipio</th><th>Principal</th><th>Estado</th><th></th></tr></thead>
       <tbody>
         <tr ng-repeat="empresa in vm.empresas">
-          <td>{{empresa.nombre}}</td><td>{{empresa.nit}}</td><td>{{empresa.logoUrl || 'Sin logo'}}</td>
+          <td>{{empresa.nombre}}</td><td>{{empresa.razonSocial}}</td><td>{{empresa.nit}}<span ng-if="empresa.digitoVerificacion">-{{empresa.digitoVerificacion}}</span></td>
+          <td>{{empresa.regimenTributario}}</td><td>{{empresa.municipio}}</td><td>{{empresa.esPrincipal ? 'Si' : 'No'}}</td>
           <td><span class="status" ng-class="{off: !empresa.estado}">{{empresa.estado ? 'Activo' : 'Inactivo'}}</span></td>
           <td class="actions">
+            <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+              <button class="icon-btn" ng-click="vm.newSucursal(empresa)" ng-disabled="!vm.canCreate"><i class="fa-solid fa-store"></i></button>
+            </span>
             <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
               <button class="icon-btn" ng-click="vm.edit(empresa)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-pen"></i></button>
             </span>
@@ -21,16 +30,69 @@
       </tbody>
     </table>
   </div>
+  <div class="panel">
+    <h3>Sedes</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Empresa</th><th>Sede</th><th>Codigo</th><th>Direccion</th><th>Municipio</th><th>Principal</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="sucursal in vm.sucursales">
+            <td>{{sucursal.empresa}}</td><td>{{sucursal.nombre}}</td><td>{{sucursal.codigo}}</td><td>{{sucursal.direccion}}</td><td>{{sucursal.municipio}}</td><td>{{sucursal.esPrincipal ? 'Si' : 'No'}}</td>
+            <td><span class="status" ng-class="{off: !sucursal.estado}">{{sucursal.estado ? 'Activa' : 'Inactiva'}}</span></td>
+            <td class="actions"><button class="icon-btn" ng-click="vm.editSucursal(sucursal)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-pen"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
   <div class="modal-backdrop" ng-if="vm.modalOpen">
     <form class="modal" ng-submit="vm.save()">
       <div class="modal-head"><h3>{{vm.form.id ? 'Editar empresa' : 'Nueva empresa'}}</h3><button type="button" class="icon-btn" ng-click="vm.modalOpen=false"><i class="fa-solid fa-xmark"></i></button></div>
-      <div class="form-grid">
-        <label>Nombre<input ng-model="vm.form.nombre" required></label>
-        <label>NIT<input ng-model="vm.form.nit" required></label>
+      <div class="form-grid three">
+        <label>Nombre comercial<input ng-model="vm.form.nombre" required></label>
+        <label>Razon social<input ng-model="vm.form.razonSocial"></label>
+        <label>Tipo documento<select ng-model="vm.form.tipoDocumento"><option>NIT</option><option>CC</option><option>CE</option><option>Pasaporte</option></select></label>
+        <label>NIT / Documento<input ng-model="vm.form.nit" required></label>
+        <label>DV<input ng-model="vm.form.digitoVerificacion" maxlength="2"></label>
+        <label>Nombre comercial DIAN<input ng-model="vm.form.nombreComercial"></label>
+        <label>Regimen tributario<select ng-model="vm.form.regimenTributario"><option>Responsable de IVA</option><option>No responsable de IVA</option><option>Regimen simple</option></select></label>
+        <label>Responsabilidad fiscal<input ng-model="vm.form.responsabilidadFiscal" placeholder="R-99-PN"></label>
+        <label>Actividad CIIU<input ng-model="vm.form.actividadEconomicaCiiu"></label>
+        <label>Matricula mercantil<input ng-model="vm.form.matriculaMercantil"></label>
+        <label>Departamento<input ng-model="vm.form.departamento"></label>
+        <label>Municipio<input ng-model="vm.form.municipio"></label>
+        <label class="wide">Direccion fiscal<input ng-model="vm.form.direccionFiscal"></label>
+        <label>Telefono<input ng-model="vm.form.telefono"></label>
+        <label>Correo facturacion<input type="email" ng-model="vm.form.correoFacturacion"></label>
+        <label>Pais<input ng-model="vm.form.pais"></label>
+        <label>Representante legal<input ng-model="vm.form.representanteLegal"></label>
+        <label>Documento representante<input ng-model="vm.form.documentoRepresentante"></label>
         <label class="wide">Logo URL<input ng-model="vm.form.logoUrl"></label>
+        <label class="check"><input type="checkbox" ng-model="vm.form.esPrincipal"> Empresa principal</label>
         <label class="check"><input type="checkbox" ng-model="vm.form.estado"> Activo</label>
       </div>
+      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
       <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.modalOpen=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>
+  </div>
+  <div class="modal-backdrop" ng-if="vm.sucursalModalOpen">
+    <form class="modal" ng-submit="vm.saveSucursal()">
+      <div class="modal-head"><h3>{{vm.sucursalForm.id ? 'Editar sede' : 'Nueva sede'}}</h3><button type="button" class="icon-btn" ng-click="vm.sucursalModalOpen=false"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="form-grid three">
+        <label>Empresa<select ng-model="vm.sucursalForm.empresaId" ng-options="e.id as e.nombre for e in vm.empresas" required></select></label>
+        <label>Nombre sede<input ng-model="vm.sucursalForm.nombre" required></label>
+        <label>Codigo<input ng-model="vm.sucursalForm.codigo"></label>
+        <label class="wide">Direccion<input ng-model="vm.sucursalForm.direccion"></label>
+        <label>Departamento<input ng-model="vm.sucursalForm.departamento"></label>
+        <label>Municipio<input ng-model="vm.sucursalForm.municipio"></label>
+        <label>Pais<input ng-model="vm.sucursalForm.pais"></label>
+        <label>Telefono<input ng-model="vm.sucursalForm.telefono"></label>
+        <label>Correo<input type="email" ng-model="vm.sucursalForm.correo"></label>
+        <label class="check"><input type="checkbox" ng-model="vm.sucursalForm.esPrincipal"> Sede principal</label>
+        <label class="check"><input type="checkbox" ng-model="vm.sucursalForm.estado"> Activa</label>
+      </div>
+      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.sucursalModalOpen=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
     </form>
   </div>
 </section>

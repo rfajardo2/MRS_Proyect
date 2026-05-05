@@ -37,6 +37,14 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<RolPermiso>().HasIndex(x => new { x.RolId, x.PermisoId, x.VentanaId }).IsUnique();
 
         modelBuilder.Entity<Empresa>().Property(x => x.Nombre).HasMaxLength(160);
+        modelBuilder.Entity<Empresa>().Property(x => x.RazonSocial).HasMaxLength(180);
+        modelBuilder.Entity<Empresa>().Property(x => x.Nit).HasMaxLength(40);
+        modelBuilder.Entity<Empresa>().Property(x => x.DigitoVerificacion).HasMaxLength(2);
+        modelBuilder.Entity<Empresa>().Property(x => x.Pais).HasMaxLength(5);
+        modelBuilder.Entity<Sucursal>().Property(x => x.Nombre).HasMaxLength(160);
+        modelBuilder.Entity<Sucursal>().Property(x => x.Codigo).HasMaxLength(40);
+        modelBuilder.Entity<Sucursal>().Property(x => x.Pais).HasMaxLength(5);
+        modelBuilder.Entity<Sucursal>().HasIndex(x => new { x.EmpresaId, x.Codigo }).IsUnique().HasFilter("[Codigo] IS NOT NULL");
         modelBuilder.Entity<Rol>().Property(x => x.Nombre).HasMaxLength(80);
         modelBuilder.Entity<Permiso>().Property(x => x.Codigo).HasMaxLength(120);
         modelBuilder.Entity<Ventana>().Property(x => x.Ruta).HasMaxLength(160);
