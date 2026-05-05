@@ -21,7 +21,10 @@
       <label>Contrasena</label>
       <div class="input-icon">
         <i class="fa-solid fa-lock"></i>
-        <input type="password" ng-model="vm.credentials.password" required autocomplete="current-password">
+        <input ng-attr-type="{{vm.showPassword ? 'text' : 'password'}}" ng-model="vm.credentials.password" required autocomplete="current-password">
+        <button class="password-toggle" type="button" ng-click="vm.togglePassword()" ng-attr-aria-label="{{vm.showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}}">
+          <i class="fa-solid" ng-class="vm.showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+        </button>
       </div>
 
       <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
