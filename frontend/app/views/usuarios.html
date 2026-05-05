@@ -1,0 +1,69 @@
+<section class="page" ng-controller="UsuariosController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Seguridad</span>
+      <h2>Usuarios</h2>
+    </div>
+    <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+      <button class="btn primary" ng-click="vm.new()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-user-plus"></i><span>Nuevo Usuario</span></button>
+    </span>
+  </div>
+
+  <div class="toolbar">
+    <div class="input-icon">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" placeholder="Filtrar usuarios" ng-model="vm.search">
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="user in vm.users | filter:vm.search">
+          <td>{{user.nombreCompleto}}</td>
+          <td>{{user.usuario}}</td>
+          <td>{{user.correo}}</td>
+          <td>{{user.rol}}</td>
+          <td><span class="status" ng-class="{off: !user.estado}">{{user.estado ? 'Activo' : 'Inactivo'}}</span></td>
+          <td class="actions">
+            <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+              <button class="icon-btn" ng-click="vm.detail(user)" ng-disabled="!vm.canConsult"><i class="fa-solid fa-eye"></i></button>
+            </span>
+            <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+              <button class="icon-btn" ng-click="vm.edit(user)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-pen"></i></button>
+            </span>
+            <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+              <button class="icon-btn" ng-click="vm.toggle(user)" ng-disabled="!vm.canDelete"><i class="fa-solid fa-power-off"></i></button>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.modalOpen">
+    <form class="modal" ng-submit="vm.save()">
+      <div class="modal-head">
+        <h3>{{vm.form.id ? 'Editar usuario' : 'Nuevo usuario'}}</h3>
+        <button type="button" class="icon-btn" ng-click="vm.modalOpen=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="form-grid">
+        <label>Nombre completo<input ng-model="vm.form.nombreCompleto" required></label>
+        <label>Usuario<input ng-model="vm.form.usuario" required></label>
+        <label>Correo<input type="email" ng-model="vm.form.correo" required></label>
+        <label ng-if="!vm.form.id || vm.canChangePassword">Contrasena<input type="password" ng-model="vm.form.password" ng-required="!vm.form.id"></label>
+        <label>Empresa<select ng-model="vm.form.empresaId" ng-options="e.id as e.nombre for e in vm.empresas" required></select></label>
+        <label>Rol<select ng-model="vm.form.rolId" ng-options="r.id as r.nombre for r in vm.roles" required></select></label>
+        <label class="check"><input type="checkbox" ng-model="vm.form.estado"> Activo</label>
+      </div>
+      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.modalOpen=false">Cancelar</button>
+        <button class="btn primary" type="submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</section>

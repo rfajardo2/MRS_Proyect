@@ -1,0 +1,36 @@
+<section class="page" ng-controller="EmpresasController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Configuracion</span><h2>Empresas</h2></div>
+    <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+      <button class="btn primary" ng-click="vm.new()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-building-circle-plus"></i><span>Nueva Empresa</span></button>
+    </span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nombre</th><th>NIT</th><th>Logo</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="empresa in vm.empresas">
+          <td>{{empresa.nombre}}</td><td>{{empresa.nit}}</td><td>{{empresa.logoUrl || 'Sin logo'}}</td>
+          <td><span class="status" ng-class="{off: !empresa.estado}">{{empresa.estado ? 'Activo' : 'Inactivo'}}</span></td>
+          <td class="actions">
+            <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+              <button class="icon-btn" ng-click="vm.edit(empresa)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-pen"></i></button>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-backdrop" ng-if="vm.modalOpen">
+    <form class="modal" ng-submit="vm.save()">
+      <div class="modal-head"><h3>{{vm.form.id ? 'Editar empresa' : 'Nueva empresa'}}</h3><button type="button" class="icon-btn" ng-click="vm.modalOpen=false"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="form-grid">
+        <label>Nombre<input ng-model="vm.form.nombre" required></label>
+        <label>NIT<input ng-model="vm.form.nit" required></label>
+        <label class="wide">Logo URL<input ng-model="vm.form.logoUrl"></label>
+        <label class="check"><input type="checkbox" ng-model="vm.form.estado"> Activo</label>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.modalOpen=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>
+  </div>
+</section>

@@ -1,0 +1,86 @@
+<section class="page" ng-controller="SesionesController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Seguridad</span>
+      <h2>Sesiones activas</h2>
+      <p>Usuarios conectados, cantidad de sesiones y cierre administrativo.</p>
+    </div>
+    <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+      <button class="btn primary" ng-click="vm.cerrarTodas()" ng-disabled="!vm.canCloseAll || vm.sesiones.length <= 1">
+        <i class="fa-solid fa-users-slash"></i>
+        <span>Cerrar todos</span>
+      </button>
+    </span>
+  </div>
+
+  <section class="metric-grid">
+    <article class="metric"><i class="fa-solid fa-users-viewfinder"></i><span>Usuarios conectados</span><strong>{{vm.resumen.length}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-layer-group"></i><span>Sesiones activas</span><strong>{{vm.sesiones.length}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-shield-halved"></i><span>Permiso cierre</span><strong>{{vm.canClose ? 'Activo' : 'No'}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-users-slash"></i><span>Cierre global</span><strong>{{vm.canCloseAll ? 'Activo' : 'No'}}</strong></article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Resumen por usuario</h3><p>Cantidad de sesiones abiertas por usuario.</p></div>
+    </div>
+    <div class="table-wrap compact-table">
+      <table>
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Sesiones</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="item in vm.resumen">
+            <td>{{item.nombreCompleto}}<span class="cell-help">{{item.nombreUsuario}}</span></td>
+            <td>{{item.rol}}</td>
+            <td><span class="status">{{item.sesionesActivas}}</span></td>
+            <td class="actions">
+              <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+                <button class="icon-btn" ng-click="vm.cerrarUsuario(item)" ng-disabled="!vm.canClose"><i class="fa-solid fa-user-lock"></i></button>
+              </span>
+            </td>
+          </tr>
+          <tr ng-if="!vm.resumen.length">
+            <td colspan="4">
+              No hay sesiones activas registradas. Cierra sesion e inicia sesion nuevamente despues de reiniciar la API.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Detalle de sesiones</h3><p>Equipo, fecha de inicio y ultima actividad.</p></div>
+      <div class="input-icon">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" placeholder="Filtrar sesiones" ng-model="vm.search">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Usuario</th><th>Rol</th><th>IP</th><th>Dispositivo</th><th>Inicio</th><th>Ultima actividad</th><th>Expira</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="sesion in vm.sesiones | filter:vm.search">
+            <td>{{sesion.nombreCompleto}}<span class="cell-help">{{sesion.esSesionActual ? 'Sesion actual' : sesion.nombreUsuario}}</span></td>
+            <td>{{sesion.rol}}</td>
+            <td>{{sesion.ipAddress || 'No disponible'}}</td>
+            <td>{{sesion.userAgent || 'No disponible'}}</td>
+            <td>{{sesion.fechaInicio | date:'dd/MM/yyyy HH:mm'}}</td>
+            <td>{{sesion.ultimaActividad | date:'dd/MM/yyyy HH:mm'}}</td>
+            <td>{{sesion.fechaExpiracion | date:'dd/MM/yyyy HH:mm'}}</td>
+            <td class="actions">
+              <span class="permission-tooltip" data-tooltip="{{sesion.esSesionActual ? 'No puedes cerrar tu sesion actual desde aqui' : 'No tiene permisos para realizar esta accion'}}">
+                <button class="icon-btn" ng-click="vm.cerrar(sesion)" ng-disabled="!vm.canClose || sesion.esSesionActual"><i class="fa-solid fa-power-off"></i></button>
+              </span>
+            </td>
+          </tr>
+          <tr ng-if="!vm.sesiones.length">
+            <td colspan="8">
+              No hay sesiones activas registradas. Las sesiones solo aparecen desde los inicios de sesion realizados despues de aplicar la actualizacion.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
