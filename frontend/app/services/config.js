@@ -2,6 +2,6 @@
   'use strict';
 
   angular.module('mrsDrunkApp').constant('apiConfig', {
-    baseUrl: 'http://mrsdrunk.somee.com/api'
+    baseUrl: 'https://mrsdrunk.somee.com/api'
   });
 })();
