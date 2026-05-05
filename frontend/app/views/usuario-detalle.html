@@ -1,0 +1,36 @@
+<section class="page" ng-controller="UsuarioDetalleController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Detalle de usuario</span>
+      <h2>{{vm.data.usuario.nombreCompleto || 'Usuario'}}</h2>
+      <p ng-if="vm.data">{{vm.data.usuario.empresa}} - {{vm.data.usuario.rol}}</p>
+    </div>
+    <button class="btn ghost" ng-click="vm.back()"><i class="fa-solid fa-arrow-left"></i><span>Volver</span></button>
+  </div>
+
+  <div class="panel" ng-if="vm.loading">
+    <h3>Cargando detalle</h3>
+    <p>Consultando la informacion del usuario...</p>
+  </div>
+
+  <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+
+  <div class="detail-grid" ng-if="vm.data && !vm.loading && !vm.error">
+    <article class="panel">
+      <h3>Datos personales</h3>
+      <dl>
+        <dt>Usuario</dt><dd>{{vm.data.usuario.usuario}}</dd>
+        <dt>Correo</dt><dd>{{vm.data.usuario.correo}}</dd>
+        <dt>Sucursal</dt><dd>{{vm.data.sucursal || 'Sin sucursal'}}</dd>
+        <dt>Estado</dt><dd><span class="status" ng-class="{off: !vm.data.usuario.estado}">{{vm.data.usuario.estado ? 'Activo' : 'Inactivo'}}</span></dd>
+      </dl>
+    </article>
+    <article class="panel">
+      <h3>Permisos heredados del rol</h3>
+      <div class="permission-list">
+        <span ng-repeat="permiso in vm.data.permisos">{{permiso.modulo}} - {{permiso.ventana}} - {{permiso.permiso}}</span>
+        <span ng-if="!vm.data.permisos.length">Sin permisos asignados.</span>
+      </div>
+    </article>
+  </div>
+</section>

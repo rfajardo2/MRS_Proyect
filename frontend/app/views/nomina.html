@@ -1,0 +1,544 @@
+<section class="page" ng-controller="NominaController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Nomina</span>
+      <h2>Gestion de nomina</h2>
+      <p ng-if="vm.control">{{vm.control.periodo.nombre}} - {{vm.control.periodo.fechaInicio | date:'dd/MM/yyyy'}} a {{vm.control.periodo.fechaFin | date:'dd/MM/yyyy'}}</p>
+    </div>
+  </div>
+
+  <div class="toolbar payroll-toolbar">
+    <label class="select-inline">Periodo
+      <select ng-model="vm.periodoId" ng-change="vm.loadControl()" ng-options="p.id as p.nombre for p in vm.periodos"></select>
+    </label>
+    <span class="status off" ng-if="vm.control && vm.control.periodo.cerrado">Cerrado</span>
+    <span class="success-text" ng-if="vm.message">{{vm.message}}</span>
+  </div>
+
+  <section class="panel" ng-if="!vm.periodos.length">
+    <h3>Sin periodos</h3>
+    <p>Crea el primer periodo de nomina para empezar a registrar dias y valores.</p>
+  </section>
+
+  <section class="metric-grid" ng-if="vm.control && vm.activeTab === 'resumen'">
+    <article class="metric"><i class="fa-solid fa-calendar"></i><span>Dias del periodo</span><strong>{{vm.control.periodo.diasConteo}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-ban"></i><span>Dias no laborados</span><strong>{{vm.control.diasNoLaborados.length}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-briefcase"></i><span>Dias trabajados</span><strong>{{vm.totalDiasTrabajo()}}</strong></article>
+    <article class="metric"><i class="fa-solid fa-money-bill-wave"></i><span>Total nomina</span><strong>{{vm.formatMoney(vm.control.totalGeneral)}}</strong></article>
+  </section>
+
+  <section class="detail-grid" ng-if="vm.control && vm.activeTab === 'resumen'">
+    <article class="panel">
+      <h3>Totales por empleado</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Empleado</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="empleado in vm.resumenEmpleados()">
+              <td>{{empleado.nombreCompleto}}</td>
+              <td>{{vm.formatMoney(vm.totalEmpleado(empleado.id))}}</td>
+            </tr>
+            <tr ng-if="!vm.resumenEmpleados().length">
+              <td colspan="2">No hay empleados con registros en este periodo.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <article class="panel">
+      <h3>Dias no laborados</h3>
+      <div class="permission-list" ng-if="vm.control.diasNoLaborados.length">
+        <span ng-repeat="dia in vm.control.diasNoLaborados">{{dia.fecha | date:'dd/MM/yyyy'}} - {{dia.motivo || 'No laborado'}}</span>
+      </div>
+      <p ng-if="!vm.control.diasNoLaborados.length">No hay dias no laborados configurados.</p>
+    </article>
+  </section>
+
+  <section class="panel" ng-if="vm.control && vm.activeTab === 'registro'">
+    <div class="panel-heading">
+      <div>
+        <h3>Registro diario</h3>
+        <p>Carga rapida por fecha para todos los empleados del periodo.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn ghost" type="button" ng-click="vm.applyDailyWorked()" ng-disabled="vm.control.periodo.cerrado"><i class="fa-solid fa-check-double"></i><span>Todos trabajan</span></button>
+        <button class="btn ghost" type="button" ng-click="vm.applyDailyNoWork()" ng-disabled="vm.control.periodo.cerrado"><i class="fa-solid fa-ban"></i><span>Todos no</span></button>
+        <button class="btn primary" type="button" ng-click="vm.saveDailyControl()" ng-disabled="vm.control.periodo.cerrado"><i class="fa-solid fa-floppy-disk"></i><span>Guardar dia</span></button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <label class="select-inline">Fecha
+        <input type="date" ng-model="vm.dailyDate" ng-change="vm.setDailyDate()">
+      </label>
+      <span class="status off" ng-if="vm.dailyRows.length && vm.dailyRows[0].esNoLaborado">{{vm.dailyRows[0].motivoNoLaborado || 'No laborado'}}</span>
+    </div>
+    <div class="daily-entry-grid">
+      <article class="daily-entry-card" ng-repeat="row in vm.dailyRows">
+        <div class="daily-entry-head">
+          <div>
+            <strong>{{row.empleado.nombreCompleto}}</strong>
+            <span>{{row.empleado.cargo || 'Empleado'}} - {{vm.formatMoney(row.empleado.valorDiaBase)}}</span>
+          </div>
+          <i class="fa-solid fa-user-check"></i>
+        </div>
+        <label>Estado
+          <select ng-model="row.estadoDia" ng-change="row.valor = row.estadoDia === 'Trabajado' ? row.empleado.valorDiaBase : 0" ng-disabled="vm.control.periodo.cerrado">
+            <option value="Trabajado">Trabajo</option>
+            <option value="No">No</option>
+            <option value="No laborado">No laborado</option>
+            <option value="Descanso">Descanso</option>
+            <option value="Festivo">Festivo</option>
+          </select>
+        </label>
+        <label>Valor
+          <input type="number" min="0" step="1000" ng-model="row.valor" ng-disabled="vm.control.periodo.cerrado">
+        </label>
+        <label>Observacion
+          <input ng-model="row.observacion" ng-disabled="vm.control.periodo.cerrado" placeholder="Opcional">
+        </label>
+        <div class="daily-novedades" ng-class="{'has-items': vm.dailyNovedades(row.empleado.id).length}">
+          <button class="btn ghost daily-novedad-toggle" type="button" ng-click="vm.toggleDailyNovedades(row.empleado.id)">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Novedades</span>
+            <small>{{vm.dailyNovedades(row.empleado.id).length}}</small>
+            <i class="fa-solid" ng-class="vm.isDailyNovedadesOpen(row.empleado.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+
+          <div class="daily-novedad-panel" ng-if="vm.isDailyNovedadesOpen(row.empleado.id)">
+            <button class="btn primary wide" type="button" ng-click="vm.openDailyNovedad(row)" ng-disabled="vm.control.periodo.cerrado">
+              <i class="fa-solid fa-plus"></i>
+              <span>Agregar novedad</span>
+            </button>
+
+            <div class="daily-novedad-list" ng-if="vm.dailyNovedades(row.empleado.id).length">
+              <div class="daily-novedad-item" ng-repeat="item in vm.dailyNovedades(row.empleado.id)">
+                <span>{{item.tipoNovedad}}</span>
+                <strong>{{item.concepto}}</strong>
+                <em>{{item.observacion || 'Sin observacion'}}</em>
+                <b>{{vm.formatMoney(vm.signedValue(item))}}</b>
+              </div>
+            </div>
+            <span class="cell-help" ng-if="!vm.dailyNovedades(row.empleado.id).length">Sin novedades para este dia.</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel" ng-if="vm.control && vm.activeTab === 'resumen'">
+    <div class="panel-heading">
+      <div>
+        <h3>Resumen detallado</h3>
+        <p>Estructura del periodo por empleado, devengados, deducciones y detalle.</p>
+      </div>
+      <strong>{{vm.formatMoney(vm.control.totalGeneral)}}</strong>
+    </div>
+
+    <div class="payroll-tree">
+      <article class="tree-period">
+        <button type="button" class="tree-row period-row tree-toggle" ng-click="vm.toggleTree('period')">
+          <i class="fa-solid" ng-class="vm.isTreeOpen('period') ? 'fa-folder-open' : 'fa-folder'"></i>
+          <div>
+            <strong>{{vm.control.periodo.nombre}}</strong>
+            <span>{{vm.control.periodo.fechaInicio | date:'dd/MM/yyyy'}} a {{vm.control.periodo.fechaFin | date:'dd/MM/yyyy'}}</span>
+          </div>
+          <b>{{vm.formatMoney(vm.control.totalGeneral)}}</b>
+          <i class="fa-solid chevron" ng-class="vm.isTreeOpen('period') ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        </button>
+
+        <div class="tree-empty" ng-if="vm.isTreeOpen('period') && !vm.controlEmpleadoTree().length">
+          No hay empleados con registros en este periodo.
+        </div>
+
+        <div class="tree-employee" ng-if="vm.isTreeOpen('period')" ng-repeat="item in vm.controlEmpleadoTree()">
+          <button type="button" class="tree-row employee-row tree-toggle" ng-click="vm.toggleTree('empleados', item.empleado.id)">
+            <i class="fa-solid fa-user-tie"></i>
+            <div>
+              <strong>{{item.empleado.nombreCompleto}}</strong>
+              <span ng-bind="vm.empleadoMeta(item.empleado)"></span>
+            </div>
+            <b>{{vm.formatMoney(item.total)}}</b>
+            <i class="fa-solid chevron" ng-class="vm.isTreeOpen('empleados', item.empleado.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+
+          <div class="tree-branch" ng-if="vm.isTreeOpen('empleados', item.empleado.id)">
+            <button type="button" class="tree-row concept-row tree-toggle" ng-click="vm.toggleTree('devengados', item.empleado.id)">
+              <i class="fa-solid fa-circle-plus"></i>
+              <div>
+                <strong>Devengados</strong>
+                <span>{{item.devengados.length}} registros</span>
+              </div>
+              <b>{{vm.formatMoney(item.totalDevengados)}}</b>
+              <i class="fa-solid chevron" ng-class="vm.isTreeOpen('devengados', item.empleado.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div class="tree-detail" ng-if="vm.isTreeOpen('devengados', item.empleado.id)" ng-repeat="detalle in item.devengados">
+              <span>{{detalle.fecha | date:'dd/MM/yyyy'}}<small ng-if="detalle.fechaFin"> a {{detalle.fechaFin | date:'dd/MM/yyyy'}}</small></span>
+              <strong>{{detalle.concepto}}</strong>
+              <em>{{detalle.detalle || 'Sin observacion'}}</em>
+              <b>{{vm.formatMoney(detalle.valor)}}</b>
+            </div>
+          </div>
+
+          <div class="tree-branch" ng-if="vm.isTreeOpen('empleados', item.empleado.id)">
+            <button type="button" class="tree-row concept-row deduction tree-toggle" ng-click="vm.toggleTree('deducciones', item.empleado.id)">
+              <i class="fa-solid fa-circle-minus"></i>
+              <div>
+                <strong>Deducidos</strong>
+                <span>{{item.deducciones.length}} registros</span>
+              </div>
+              <b>{{vm.formatMoney(item.totalDeducciones)}}</b>
+              <i class="fa-solid chevron" ng-class="vm.isTreeOpen('deducciones', item.empleado.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div class="tree-detail deduction" ng-if="vm.isTreeOpen('deducciones', item.empleado.id)" ng-repeat="detalle in item.deducciones">
+              <span>{{detalle.fecha | date:'dd/MM/yyyy'}}<small ng-if="detalle.fechaFin"> a {{detalle.fechaFin | date:'dd/MM/yyyy'}}</small></span>
+              <strong>{{detalle.concepto}}</strong>
+              <em>{{detalle.detalle || 'Sin observacion'}}</em>
+              <b>-{{vm.formatMoney(detalle.valor)}}</b>
+            </div>
+            <div class="tree-empty small" ng-if="vm.isTreeOpen('deducciones', item.empleado.id) && !item.deducciones.length">Sin deducciones registradas.</div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel" ng-if="vm.control && vm.activeTab === 'control'">
+    <div class="panel-heading">
+      <div>
+        <h3>Control diario</h3>
+        <p>Vista tipo Excel con empleados que registran movimientos en el periodo.</p>
+      </div>
+      <div class="page-actions">
+        <span class="permission-tooltip" data-tooltip="No tiene permisos para realizar esta accion">
+          <button class="btn ghost" type="button" ng-click="vm.exportControlExcel()" ng-disabled="!vm.canExportControl || !vm.controlGridEmpleados().length">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Exportar Excel</span>
+          </button>
+        </span>
+        <strong>{{vm.formatMoney(vm.control.totalGeneral)}}</strong>
+      </div>
+    </div>
+    <div class="tree-empty" ng-if="!vm.controlGridEmpleados().length">
+      No hay empleados con registros en este periodo.
+    </div>
+    <div class="payroll-grid-wrap excel-grid-wrap" ng-if="vm.controlGridEmpleados().length">
+      <table class="payroll-grid excel-grid">
+        <thead>
+          <tr>
+            <th class="sticky-col date-col">Fecha</th>
+            <th>Dia</th>
+            <th ng-repeat="empleado in vm.controlGridEmpleados()">
+              <button type="button" class="employee-head" ng-click="vm.openEmpleado(empleado)">
+                <span>{{empleado.nombreCompleto}}</span>
+                <small>{{empleado.cargo || 'Empleado'}}</small>
+              </button>
+            </th>
+            <th>Novedades</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="dia in vm.control.dias" ng-class="{'non-working-row': dia.esNoLaborado}">
+            <td class="sticky-col date-col">{{dia.fecha | date:'dd/MM/yyyy'}}</td>
+            <td class="day-name">{{dia.dia}}<span class="cell-help" ng-if="dia.esNoLaborado">{{dia.motivoNoLaborado || 'No laborado'}}</span></td>
+            <td ng-repeat="empleado in vm.controlGridEmpleados()" ng-init="cell = vm.controlCell(empleado.id, dia.fecha)" ng-class="{'excel-empty': cell.estado === 'empty', 'excel-off': cell.estado === 'off', 'excel-value': cell.estado === 'value', 'excel-deduction': cell.estado === 'deduction'}">
+              {{cell.texto}}
+            </td>
+            <td class="excel-value pretty-tooltip-cell" ng-class="{'has-tooltip': vm.totalNovedadesDia(dia.fecha)}">
+              {{vm.totalNovedadesDia(dia.fecha) ? vm.formatMoney(vm.totalNovedadesDia(dia.fecha)) : ''}}
+              <div class="pretty-tooltip" ng-if="vm.totalNovedadesDia(dia.fecha)">
+                <div class="pretty-tooltip-item" ng-repeat="tip in vm.novedadesDiaTooltip(dia.fecha) track by $index">
+                  <small ng-bind="tip.empleado"></small>
+                  <strong ng-bind="tip.titulo"></strong>
+                  <span ng-bind="tip.detalle"></span>
+                  <em ng-if="tip.observacion" ng-bind="tip.observacion"></em>
+                  <b ng-bind="vm.formatMoney(tip.valor)"></b>
+                </div>
+              </div>
+            </td>
+            <td class="total-cell">{{vm.totalControlDia(dia.fecha) ? vm.formatMoney(vm.totalControlDia(dia.fecha)) : '-'}}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="sticky-col date-col">TOTAL</td>
+            <td></td>
+            <td ng-repeat="empleado in vm.controlGridEmpleados()">{{vm.formatMoney(vm.totalEmpleado(empleado.id))}}</td>
+            <td>{{vm.formatMoney(vm.totalNovedades())}}</td>
+            <td>{{vm.formatMoney(vm.control.totalGeneral)}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" ng-if="vm.control && vm.activeTab === 'novedades'">
+    <div class="panel-heading">
+      <div><h3>Novedades legales</h3><p>Devengos y deducciones del periodo alineados a nomina electronica.</p></div>
+      <div class="payroll-summary">
+        <span>Devengos <strong>{{vm.formatMoney(vm.totalDevengos())}}</strong></span>
+        <span>Deducciones <strong>{{vm.formatMoney(vm.totalDeducciones())}}</strong></span>
+        <span>Neto <strong>{{vm.formatMoney(vm.totalNovedades())}}</strong></span>
+      </div>
+    </div>
+    <form class="legal-novedad-form" ng-submit="vm.saveNovedad()">
+      <label>Empleado
+        <select ng-model="vm.novedadForm.empleadoId" ng-options="e.id as e.nombreCompleto for e in vm.control.empleados" required></select>
+      </label>
+      <label>Tipo
+        <select ng-model="vm.novedadForm.tipoNovedad" ng-change="vm.onTipoNovedadChange()" ng-options="x for x in vm.tiposNovedad" required></select>
+      </label>
+      <label>Concepto legal
+        <select ng-model="vm.novedadForm.codigoNovedad" ng-options="c.codigo as c.nombre for c in vm.conceptosDisponibles()" required></select>
+      </label>
+      <label>Fecha inicio
+        <input type="date" ng-model="vm.novedadForm.fecha" required>
+      </label>
+      <label>Fecha fin
+        <input type="date" ng-model="vm.novedadForm.fechaFin">
+      </label>
+      <label>Horas
+        <input type="number" min="0" step="0.5" ng-model="vm.novedadForm.horas" placeholder="Si aplica">
+      </label>
+      <label>Porcentaje
+        <input type="number" min="0" step="0.01" ng-model="vm.novedadForm.porcentaje" placeholder="Si aplica">
+      </label>
+      <label>Base calculo
+        <input type="number" min="0" step="1000" ng-model="vm.novedadForm.baseCalculo" placeholder="Si aplica">
+      </label>
+      <label>Valor
+        <input type="number" min="0" step="1000" ng-model="vm.novedadForm.valor" required>
+      </label>
+      <label class="wide">Soporte / observacion
+        <input ng-model="vm.novedadForm.observacion" placeholder="Ej: incapacidad EPS, libranza autorizada, horas aprobadas">
+      </label>
+      <button class="btn primary" type="submit" ng-disabled="vm.control.periodo.cerrado"><i class="fa-solid fa-plus"></i><span>Agregar novedad</span></button>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Concepto</th><th>Detalle</th><th>Valor</th><th>Observacion</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="item in vm.novedades()">
+            <td>{{item.fecha | date:'dd/MM/yyyy'}}<span class="cell-help" ng-if="item.fechaFin">a {{item.fechaFin | date:'dd/MM/yyyy'}}</span></td>
+            <td>{{vm.empleadoNombre(item.empleadoId)}}</td>
+            <td><span class="status" ng-class="{off: item.tipoNovedad === 'Deduccion'}">{{item.tipoNovedad}}</span></td>
+            <td>{{item.concepto}}</td>
+            <td>
+              <span class="cell-help" ng-if="item.horas">{{item.horas}} horas</span>
+              <span class="cell-help" ng-if="item.porcentaje">{{item.porcentaje}}%</span>
+              <span class="cell-help" ng-if="item.baseCalculo">Base {{vm.formatMoney(item.baseCalculo)}}</span>
+            </td>
+            <td>{{vm.formatMoney(vm.signedValue(item))}}</td>
+            <td>{{item.observacion}}</td>
+            <td class="actions"><button class="icon-btn" ng-click="vm.deleteRegistro(item)" ng-disabled="vm.control.periodo.cerrado"><i class="fa-solid fa-trash"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" ng-if="vm.control && vm.activeTab === 'empleados'">
+    <div class="panel-heading"><div><h3>Empleados</h3><p>Personas incluidas en la nomina de la empresa.</p></div><button class="btn primary" ng-click="vm.openEmpleado()"><i class="fa-solid fa-user-plus"></i><span>Nuevo</span></button></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Contrato</th><th>Valor dia</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="empleado in vm.control.todosEmpleados">
+            <td>{{empleado.nombreCompleto}}</td>
+            <td>{{empleado.tipoDocumento}} {{empleado.numeroDocumento || empleado.documento}}</td>
+            <td>{{empleado.cargo}}</td>
+            <td>{{empleado.tipoContrato}}</td>
+            <td>{{vm.formatMoney(empleado.valorDiaBase)}}</td>
+            <td><span class="status" ng-class="{off: !empleado.estado}">{{empleado.estado ? 'Activo' : 'Inactivo'}}</span></td>
+            <td class="actions"><button class="icon-btn" ng-click="vm.openEmpleado(empleado)"><i class="fa-solid fa-pen"></i></button><button class="icon-btn" ng-click="vm.toggleEmpleado(empleado)"><i class="fa-solid fa-power-off"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" ng-if="vm.activeTab === 'periodos'">
+    <div class="panel-heading">
+      <div><h3>Periodos</h3><p>Configuracion de fechas, conteo de dias, dias no laborados y cierre.</p></div>
+      <div class="page-actions">
+        <button class="btn ghost" ng-click="vm.configPeriodo()" ng-disabled="!vm.control || vm.control.periodo.cerrado"><i class="fa-solid fa-sliders"></i><span>Configurar actual</span></button>
+        <button class="btn ghost" ng-click="vm.openPeriodo()"><i class="fa-solid fa-calendar-plus"></i><span>Nuevo</span></button>
+        <button class="btn primary" ng-click="vm.cerrarPeriodo()" ng-disabled="!vm.control || vm.control.periodo.cerrado"><i class="fa-solid fa-lock"></i><span>Cerrar actual</span></button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Periodo</th><th>Inicio</th><th>Fin</th><th>Dias</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="periodo in vm.periodos">
+            <td>{{periodo.nombre}}</td>
+            <td>{{periodo.fechaInicio | date:'dd/MM/yyyy'}}</td>
+            <td>{{periodo.fechaFin | date:'dd/MM/yyyy'}}</td>
+            <td>{{periodo.diasConteo}}</td>
+            <td><span class="status" ng-class="{off: periodo.cerrado}">{{periodo.cerrado ? 'Cerrado' : 'Abierto'}}</span></td>
+            <td class="actions"><button class="icon-btn" ng-click="vm.periodoId = periodo.id; vm.loadControl(); vm.configPeriodo(periodo)" ng-disabled="periodo.cerrado"><i class="fa-solid fa-sliders"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" ng-if="vm.modalPeriodo">
+    <form class="modal" ng-submit="vm.savePeriodo()">
+      <div class="modal-head"><h3>{{vm.periodoForm.id ? 'Configurar periodo' : 'Nuevo periodo'}}</h3><button type="button" class="icon-btn" ng-click="vm.modalPeriodo=false"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="form-grid">
+        <label>Ano<input type="number" ng-model="vm.periodoForm.anio" ng-change="vm.updatePeriodoDefaults()" required></label>
+        <label>Mes<input type="number" min="1" max="12" ng-model="vm.periodoForm.mes" ng-change="vm.updatePeriodoDefaults()" required></label>
+        <label class="wide">Nombre<input ng-model="vm.periodoForm.nombre" placeholder="Opcional"></label>
+        <label>Fecha inicio<input type="date" ng-model="vm.periodoForm.fechaInicio" required></label>
+        <label>Fecha fin<input type="date" ng-model="vm.periodoForm.fechaFin" required></label>
+        <div class="wide period-config">
+          <div class="panel-heading compact-heading"><div><h3>Dias no laborados</h3><p>Fechas dentro del periodo que no se trabajaron.</p></div><button type="button" class="btn ghost" ng-click="vm.addNoLaborado()"><i class="fa-solid fa-plus"></i><span>Agregar</span></button></div>
+          <div class="non-working-list" ng-if="vm.periodoForm.diasNoLaborados.length">
+            <div class="non-working-item" ng-repeat="dia in vm.periodoForm.diasNoLaborados track by $index">
+              <input type="date" ng-model="dia.fecha">
+              <input ng-model="dia.motivo" placeholder="Motivo">
+              <button type="button" class="icon-btn" ng-click="vm.removeNoLaborado($index)" title="Quitar"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+          <span class="cell-help" ng-if="!vm.periodoForm.diasNoLaborados.length">No hay dias no laborados configurados.</span>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.modalPeriodo=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.modalEmpleado">
+    <form class="modal modal-wide" ng-submit="vm.saveEmpleado()">
+      <div class="modal-head"><h3>{{vm.empleadoForm.id ? 'Editar empleado' : 'Nuevo empleado'}}</h3><button type="button" class="icon-btn" ng-click="vm.modalEmpleado=false"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="form-sections">
+        <section>
+          <h4>Identificacion y datos personales</h4>
+          <div class="form-grid three">
+            <label>Tipo documento<select ng-model="vm.empleadoForm.tipoDocumento" ng-options="x for x in vm.tiposDocumento" required></select></label>
+            <label>Numero documento<input ng-model="vm.empleadoForm.numeroDocumento" required></label>
+            <label>Fecha expedicion<input type="date" ng-model="vm.empleadoForm.fechaExpedicionDocumento"></label>
+            <label>Primer nombre<input ng-model="vm.empleadoForm.primerNombre" required></label>
+            <label>Segundo nombre<input ng-model="vm.empleadoForm.segundoNombre"></label>
+            <label>Primer apellido<input ng-model="vm.empleadoForm.primerApellido" required></label>
+            <label>Segundo apellido<input ng-model="vm.empleadoForm.segundoApellido"></label>
+            <label>Fecha nacimiento<input type="date" ng-model="vm.empleadoForm.fechaNacimiento"></label>
+            <label>Genero<select ng-model="vm.empleadoForm.genero" ng-options="x for x in vm.generos"><option value="">Seleccionar</option></select></label>
+            <label>Estado civil<select ng-model="vm.empleadoForm.estadoCivil" ng-options="x for x in vm.estadosCiviles"><option value="">Seleccionar</option></select></label>
+            <label class="wide">Nombre completo<input ng-model="vm.empleadoForm.nombreCompleto" placeholder="Se completa automaticamente si lo dejas vacio"></label>
+          </div>
+        </section>
+
+        <section>
+          <h4>Contacto y ubicacion</h4>
+          <div class="form-grid three">
+            <label>Telefono<input ng-model="vm.empleadoForm.telefono"></label>
+            <label>Correo<input type="email" ng-model="vm.empleadoForm.correo"></label>
+            <label>Pais
+              <input ng-model="vm.empleadoForm.pais" ng-change="vm.onPaisChange()" list="paisesList" placeholder="Buscar pais">
+            </label>
+            <label>Departamento
+              <input ng-model="vm.empleadoForm.departamento" ng-change="vm.onDepartamentoChange()" list="departamentosList" placeholder="Buscar departamento">
+            </label>
+            <label>Municipio / ciudad
+              <input ng-model="vm.empleadoForm.municipio" list="municipiosList" placeholder="Buscar ciudad">
+            </label>
+            <label class="wide">Direccion<input ng-model="vm.empleadoForm.direccion"></label>
+          </div>
+          <datalist id="paisesList">
+            <option ng-repeat="pais in vm.paises" value="{{pais}}"></option>
+          </datalist>
+          <datalist id="departamentosList">
+            <option ng-repeat="departamento in vm.departamentosColombia" value="{{departamento}}"></option>
+          </datalist>
+          <datalist id="municipiosList">
+            <option ng-repeat="municipio in vm.municipiosDisponibles()" value="{{municipio}}"></option>
+          </datalist>
+        </section>
+
+        <section>
+          <h4>Informacion laboral</h4>
+          <div class="form-grid three">
+            <label>Cargo<input ng-model="vm.empleadoForm.cargo"></label>
+            <label>Fecha ingreso<input type="date" ng-model="vm.empleadoForm.fechaIngreso" required></label>
+            <label>Fecha retiro<input type="date" ng-model="vm.empleadoForm.fechaRetiro"></label>
+            <label>Tipo contrato<select ng-model="vm.empleadoForm.tipoContrato" ng-options="x for x in vm.tiposContrato" required></select></label>
+            <label>Tipo trabajador<select ng-model="vm.empleadoForm.tipoTrabajador" ng-options="x for x in vm.tiposTrabajador" required></select></label>
+            <label>Subtipo cotizante<select ng-model="vm.empleadoForm.subtipoCotizante" ng-options="x for x in vm.subtiposCotizante" required></select></label>
+            <label>Tipo salario<select ng-model="vm.empleadoForm.tipoSalario" ng-options="x for x in vm.tiposSalario" required></select></label>
+            <label>Salario base<input type="number" min="0" step="1000" ng-model="vm.empleadoForm.salarioBase"></label>
+            <label>Valor dia<input type="number" min="0" step="1000" ng-model="vm.empleadoForm.valorDiaBase" required></label>
+            <label>Periodicidad pago<select ng-model="vm.empleadoForm.periodicidadPago" ng-options="x for x in vm.periodicidadesPago" required></select></label>
+            <label>Jornada laboral<select ng-model="vm.empleadoForm.jornadaLaboral" ng-options="x for x in vm.jornadasLaborales" required></select></label>
+            <label class="check"><input type="checkbox" ng-model="vm.empleadoForm.salarioIntegral"> Salario integral</label>
+            <label class="check"><input type="checkbox" ng-model="vm.empleadoForm.estado"> Activo</label>
+          </div>
+        </section>
+
+        <section>
+          <h4>Seguridad social y parafiscales</h4>
+          <div class="form-grid three">
+            <label>EPS<input ng-model="vm.empleadoForm.eps"></label>
+            <label>Fondo pension<input ng-model="vm.empleadoForm.fondoPension"></label>
+            <label>Fondo cesantias<input ng-model="vm.empleadoForm.fondoCesantias"></label>
+            <label>ARL<input ng-model="vm.empleadoForm.arl"></label>
+            <label>Nivel riesgo ARL<select ng-model="vm.empleadoForm.nivelRiesgoArl" ng-options="x for x in vm.nivelesRiesgoArl" required></select></label>
+            <label>Caja compensacion<input ng-model="vm.empleadoForm.cajaCompensacion"></label>
+          </div>
+        </section>
+
+        <section>
+          <h4>Pago, emergencia y observaciones</h4>
+          <div class="form-grid three">
+            <label>Banco<input ng-model="vm.empleadoForm.banco"></label>
+            <label>Tipo cuenta<select ng-model="vm.empleadoForm.tipoCuenta" ng-options="x for x in vm.tiposCuenta"><option value="">Seleccionar</option></select></label>
+            <label>Numero cuenta<input ng-model="vm.empleadoForm.numeroCuenta"></label>
+            <label>Contacto emergencia<input ng-model="vm.empleadoForm.contactoEmergenciaNombre"></label>
+            <label>Telefono emergencia<input ng-model="vm.empleadoForm.contactoEmergenciaTelefono"></label>
+            <label class="wide">Observaciones<input ng-model="vm.empleadoForm.observaciones"></label>
+          </div>
+        </section>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.modalEmpleado=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.modalDailyNovedad">
+    <form class="modal" ng-submit="vm.saveDailyNovedad()">
+      <div class="modal-head">
+        <div>
+          <h3>Agregar novedad</h3>
+          <p ng-if="vm.dailyNovedadRow">{{vm.dailyNovedadRow.empleado.nombreCompleto}} - {{vm.dailyDate | date:'dd/MM/yyyy'}}</p>
+        </div>
+        <button type="button" class="icon-btn" ng-click="vm.closeDailyNovedad()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="form-grid" ng-if="vm.dailyNovedadRow">
+        <label>Tipo
+          <select ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].tipoNovedad" ng-change="vm.onDailyTipoNovedadChange(vm.dailyNovedadRow.empleado.id)" ng-options="x for x in vm.tiposNovedad" required></select>
+        </label>
+        <label>Concepto
+          <select ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].codigoNovedad" ng-options="c.codigo as c.nombre for c in vm.conceptosNovedad[vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].tipoNovedad]" required></select>
+        </label>
+        <label>Valor
+          <input type="number" min="0" step="1000" ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].valor" required>
+        </label>
+        <label>Horas
+          <input type="number" min="0" step="0.5" ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].horas" placeholder="Si aplica">
+        </label>
+        <label>Porcentaje
+          <input type="number" min="0" step="0.01" ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].porcentaje" placeholder="Si aplica">
+        </label>
+        <label>Base calculo
+          <input type="number" min="0" step="1000" ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].baseCalculo" placeholder="Si aplica">
+        </label>
+        <label class="wide">Soporte / observacion
+          <input ng-model="vm.dailyNovedadForms[vm.dailyNovedadRow.empleado.id].observacion" placeholder="Ej: comision aprobada, descuento autorizado">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.closeDailyNovedad()">Cancelar</button>
+        <button class="btn primary" type="submit"><i class="fa-solid fa-check"></i><span>Confirmar</span></button>
+      </div>
+    </form>
+  </div>
+</section>

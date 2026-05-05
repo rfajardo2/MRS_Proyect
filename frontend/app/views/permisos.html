@@ -1,0 +1,42 @@
+<section class="page" ng-controller="PermisosController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Seguridad</span><h2>Permisos</h2></div>
+    <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+      <button class="btn primary" ng-click="vm.save()" ng-disabled="!vm.selectedRole || !vm.canConfigure"><i class="fa-solid fa-floppy-disk"></i><span>Guardar</span></button>
+    </span>
+  </div>
+  <div class="toolbar">
+    <label class="select-inline">Rol
+      <select ng-model="vm.selectedRole" ng-change="vm.loadGrid()" ng-options="r.id as r.nombre for r in vm.roles"></select>
+    </label>
+    <span class="success-text" ng-if="vm.message">{{vm.message}}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="permissions-table">
+      <thead><tr><th>Modulo</th><th>Ventana</th><th>Ver</th><th>Crear</th><th>Consultar</th><th>Editar</th><th>Eliminar</th><th>Permisos adicionales</th></tr></thead>
+      <tbody>
+        <tr ng-repeat="row in vm.grid">
+          <td>{{row.modulo}}</td>
+          <td>
+            <strong>{{row.ventana}}</strong>
+            <span class="cell-help">La opcion aparece en el menu cuando Ver esta activo.</span>
+          </td>
+          <td><input type="checkbox" ng-model="row.ver.puedeVer" ng-disabled="!vm.canConfigure || row.ver.missing" title="Permite entrar y consultar la ventana"></td>
+          <td><input type="checkbox" ng-model="row.crear.puedeCrear" ng-disabled="!vm.canConfigure || row.crear.missing" title="Permite crear registros"></td>
+          <td><input type="checkbox" ng-model="row.consultar.puedeConsultar" ng-disabled="!vm.canConfigure || row.consultar.missing" title="Permite abrir detalle o consultas puntuales"></td>
+          <td><input type="checkbox" ng-model="row.editar.puedeEditar" ng-disabled="!vm.canConfigure || row.editar.missing" title="Permite editar registros"></td>
+          <td><input type="checkbox" ng-model="row.eliminar.puedeEliminar" ng-disabled="!vm.canConfigure || row.eliminar.missing" title="Permite eliminar o inactivar registros"></td>
+          <td>
+            <div class="extra-permissions" ng-if="row.adicionales.length">
+              <label ng-repeat="permiso in row.adicionales">
+                <input type="checkbox" ng-model="permiso.puedeVer" ng-disabled="!vm.canConfigure">
+                <span>{{permiso.nombre}}</span>
+              </label>
+            </div>
+            <span class="cell-help" ng-if="!row.adicionales.length">Sin permisos adicionales</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

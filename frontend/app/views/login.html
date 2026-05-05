@@ -1,0 +1,35 @@
+<main class="login-page">
+  <section class="login-panel">
+    <div class="brand-lockup">
+      <img src="app/assets/img/mrs-drunk-logo.svg" alt="MRS Drunk">
+      <div>
+        <span class="eyebrow">Plataforma administrativa</span>
+        <h1>MRS Drunk</h1>
+      </div>
+    </div>
+
+    <form class="login-card" ng-submit="vm.login()">
+      <h2>Iniciar sesion</h2>
+      <p>Acceso seguro para administrar usuarios, roles y permisos del local.</p>
+
+      <label>Usuario o correo</label>
+      <div class="input-icon">
+        <i class="fa-solid fa-user"></i>
+        <input type="text" ng-model="vm.credentials.usuarioOCorreo" required autocomplete="username">
+      </div>
+
+      <label>Contrasena</label>
+      <div class="input-icon">
+        <i class="fa-solid fa-lock"></i>
+        <input type="password" ng-model="vm.credentials.password" required autocomplete="current-password">
+      </div>
+
+      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+
+      <button class="btn primary wide" type="submit" ng-disabled="vm.loading">
+        <i class="fa-solid fa-martini-glass-citrus"></i>
+        <span>{{vm.loading ? 'Validando...' : 'Entrar'}}</span>
+      </button>
+    </form>
+  </section>
+</main>

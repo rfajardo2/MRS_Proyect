@@ -1,0 +1,9 @@
+@MRSDrunk.Api_HostAddress = https://localhost:7271
+
+POST {{MRSDrunk.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usuarioOCorreo": "admin",
+  "password": "Admin123*"
+}

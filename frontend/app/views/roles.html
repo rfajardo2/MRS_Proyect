@@ -1,0 +1,40 @@
+<section class="page" ng-controller="RolesController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Seguridad</span><h2>Roles</h2></div>
+    <span class="permission-tooltip" data-tooltip="{{vm.permissionTooltip}}">
+      <button class="btn primary" ng-click="vm.new()" ng-disabled="!vm.canCreate"><i class="fa-solid fa-plus"></i><span>Nuevo Rol</span></button>
+    </span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nombre</th><th>Descripcion</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="role in vm.roles">
+          <td>{{role.nombre}}</td><td>{{role.descripcion}}</td><td>{{role.esSuperUsuario ? 'Global' : 'Empresa'}}</td>
+          <td><span class="status" ng-class="{off: !role.estado}">{{role.estado ? 'Activo' : 'Inactivo'}}</span></td>
+          <td class="actions">
+            <span class="permission-tooltip" data-tooltip="{{vm.roleEditTooltip(role)}}">
+              <button class="icon-btn" ng-disabled="role.esSuperUsuario || !vm.canEdit" ng-click="vm.edit(role)"><i class="fa-solid fa-pen"></i></button>
+            </span>
+            <span class="permission-tooltip" data-tooltip="{{vm.roleToggleTooltip(role)}}">
+              <button class="icon-btn" ng-disabled="role.esSuperUsuario || !vm.canDelete" ng-click="vm.toggle(role)"><i class="fa-solid fa-power-off"></i></button>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-backdrop" ng-if="vm.modalOpen">
+    <form class="modal" ng-submit="vm.save()">
+      <div class="modal-head"><h3>{{vm.form.id ? 'Editar rol' : 'Nuevo rol'}}</h3><button type="button" class="icon-btn" ng-click="vm.modalOpen=false"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="form-grid">
+        <label>Empresa<select ng-model="vm.form.empresaId" ng-options="e.id as e.nombre for e in vm.empresas"><option value="">Global</option></select></label>
+        <label>Nombre<input ng-model="vm.form.nombre" required></label>
+        <label class="wide">Descripcion<input ng-model="vm.form.descripcion"></label>
+        <label class="check"><input type="checkbox" ng-model="vm.form.estado"> Activo</label>
+      </div>
+      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.modalOpen=false">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>
+  </div>
+</section>

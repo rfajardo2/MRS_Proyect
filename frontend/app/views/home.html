@@ -1,0 +1,33 @@
+<section class="page" ng-controller="HomeController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Dashboard</span>
+      <h2>Bienvenido, {{vm.user.nombreCompleto}}</h2>
+      <p>{{vm.user.empresa}} · {{vm.user.nombreRol}}</p>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <article class="metric" ng-repeat="card in vm.cards" ng-class="card.tone">
+      <i class="fa-solid {{card.icon}}"></i>
+      <span>{{card.title}}</span>
+      <strong>{{card.value}}</strong>
+    </article>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h3>Modulos disponibles</h3>
+        <p>Opciones cargadas segun permisos del usuario autenticado.</p>
+      </div>
+    </div>
+    <div class="module-grid">
+      <article class="module-tile" ng-repeat="modulo in vm.modules">
+        <i class="fa-solid {{modulo.icono}}"></i>
+        <strong>{{modulo.nombre}}</strong>
+        <span>{{modulo.ventanas.length}} ventanas</span>
+      </article>
+    </div>
+  </section>
+</section>

@@ -1,0 +1,59 @@
+<div class="app-shell" ng-class="{'sidebar-open': layout.sidebarOpen}">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="app/assets/img/mrs-drunk-logo.svg" alt="MRS Drunk">
+      <div>
+        <strong>MRS Drunk</strong>
+        <span>{{layout.user.empresa}}</span>
+      </div>
+    </div>
+
+    <div class="profile">
+      <div class="avatar">{{layout.user.nombreCompleto.charAt(0)}}</div>
+      <div>
+        <strong>{{layout.user.nombreCompleto}}</strong>
+        <span>{{layout.user.nombreRol}}</span>
+      </div>
+    </div>
+
+    <div class="menu-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" placeholder="Buscar opcion" ng-model="layout.search">
+    </div>
+
+    <nav class="menu">
+      <section ng-repeat="modulo in layout.menu" ng-if="!layout.normalizedSearch || (modulo.nombre | lowercase).indexOf(layout.normalizedSearch) >= 0 || modulo.ventanas.length">
+        <h3><i class="fa-solid {{modulo.icono}}"></i>{{modulo.nombre}}</h3>
+        <button type="button"
+                ng-repeat="ventana in modulo.ventanas | filter:layout.search"
+                ng-class="{active: layout.isActive(ventana.ruta)}"
+                ng-click="layout.go(ventana.ruta)">
+          <i class="fa-solid {{ventana.icono}}"></i>
+          <span>{{ventana.nombre}}</span>
+        </button>
+      </section>
+    </nav>
+
+    <button class="btn ghost logout" type="button" ng-click="layout.logout()">
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Cerrar sesion</span>
+    </button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <button class="icon-btn mobile-only" type="button" ng-click="layout.sidebarOpen = !layout.sidebarOpen" title="Menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div>
+        <span class="eyebrow">Administracion comercial</span>
+        <h1>MRS Drunk</h1>
+      </div>
+      <div class="topbar-user">
+        <span>{{layout.user.nombreUsuario}}</span>
+        <i class="fa-solid fa-circle-user"></i>
+      </div>
+    </header>
+    <div class="view-host" ng-include="layout.view"></div>
+  </main>
+</div>
