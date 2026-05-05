@@ -3,9 +3,14 @@
 
   angular.module('mrsDrunkApp').controller('LoginController', function ($location, authService) {
     var vm = this;
-    vm.credentials = { usuarioOCorreo: 'admin', password: 'Admin123*' };
+    vm.credentials = { usuarioOCorreo: '', password: '' };
     vm.loading = false;
     vm.error = null;
+    vm.showPassword = false;
+
+    vm.togglePassword = function () {
+      vm.showPassword = !vm.showPassword;
+    };
 
     vm.login = function () {
       vm.loading = true;
