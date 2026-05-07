@@ -1,0 +1,74 @@
+<main class="public-menu-page">
+  <header class="public-menu-header">
+    <button class="icon-btn" type="button" ng-click="vm.goInicio()" title="Volver">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="public-menu-brand">
+      <img src="app/assets/img/mrs-drunk-logo.svg" alt="MRS Drunk">
+      <div>
+        <strong>MRS Drunk</strong>
+        <span>Carta disponible</span>
+      </div>
+      <span class="status">Abierto</span>
+    </div>
+    <button class="btn ghost" type="button" ng-click="vm.goLogin()">
+      <i class="fa-solid fa-right-to-bracket"></i>
+      <span>Iniciar sesion</span>
+    </button>
+  </header>
+
+  <section class="public-menu-cover">
+    <img src="app/assets/img/mrsdrunk_logo.jpg" alt="MRS Drunk">
+    <div class="public-menu-cover-copy">
+      <span class="eyebrow">Menu disponible</span>
+      <h1>MRS Drunk</h1>
+      <p>Explora cocteles, cervezas, licores y bebidas disponibles en la carta.</p>
+    </div>
+  </section>
+
+  <section class="public-menu-content">
+    <div class="public-menu-tools">
+      <div class="public-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" ng-model="vm.search" placeholder="Buscar producto">
+      </div>
+      <nav class="public-category-tabs" aria-label="Categorias del menu">
+        <button type="button" ng-click="vm.selectCategoria('')" ng-class="{active: !vm.categoriaActiva}">
+          Todo
+        </button>
+        <button type="button" ng-repeat="cat in vm.categorias" ng-click="vm.selectCategoria(cat)" ng-class="{active: vm.categoriaActiva === cat}">
+          {{cat}}
+        </button>
+      </nav>
+    </div>
+
+    <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+    <div class="public-empty" ng-if="!vm.loading && !vm.filteredProductos().length && !vm.error">
+      No hay productos disponibles para mostrar.
+    </div>
+
+    <div class="public-menu-loading" ng-if="vm.loading">
+      <div class="loading-spinner"></div>
+      <strong>Cargando menu</strong>
+    </div>
+
+    <section class="public-menu-section" ng-repeat="cat in vm.categoriasVisibles()" ng-if="!vm.loading">
+      <div class="public-section-heading">
+        <span>{{vm.productosPorCategoria(cat).length}} productos</span>
+        <h2>{{cat}}</h2>
+      </div>
+      <div class="public-product-grid">
+        <article class="public-product" ng-repeat="prod in vm.productosPorCategoria(cat)">
+          <div>
+            <h3>{{prod.nombre}}</h3>
+            <p>{{prod.descripcion || 'Disponible en la carta.'}}</p>
+            <strong>{{vm.formatPrice(prod.precioVenta)}}</strong>
+          </div>
+          <div class="public-product-mark">
+            <i class="fa-solid fa-martini-glass-citrus"></i>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
+</main>

@@ -33,7 +33,7 @@
       layout.menu = [];
       layout.menuLoaded = false;
       layout.user = null;
-      $location.path('/login');
+      $location.path('/inicio');
     };
 
     layout.go = function (ruta) {

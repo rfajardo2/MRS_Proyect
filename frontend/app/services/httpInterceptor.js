@@ -38,7 +38,7 @@
         if (rejection.status === 401) {
           $window.sessionStorage.removeItem('mrs_drunk_token');
           $window.sessionStorage.removeItem('mrs_drunk_user');
-          $location.path('/login');
+          $location.path('/inicio');
         }
         return $q.reject(rejection);
       }
