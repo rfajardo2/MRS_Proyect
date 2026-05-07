@@ -1,0 +1,119 @@
+<section class="page" ng-controller="BalanceDiaController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Operacion</span><h2>Balance del dia</h2></div>
+  </div>
+  <div class="metric-grid" ng-if="vm.balance">
+    <article class="metric"><span>Cuentas abiertas</span><strong>{{vm.balance.cuentasAbiertas}}</strong></article>
+    <article class="metric"><span>Cuentas cerradas</span><strong>{{vm.balance.cuentasCerradas}}</strong></article>
+    <article class="metric"><span>Total vendido</span><strong>{{vm.balance.totalVendido | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Total pagado</span><strong>{{vm.balance.totalPagado | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Propinas</span><strong>{{vm.balance.totalPropinas | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Saldo pendiente</span><strong>{{vm.balance.saldoPendiente | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Pendientes aprobacion</span><strong>{{vm.balance.cuentasPendientes}}</strong></article>
+    <article class="metric"><span>Rechazadas</span><strong>{{vm.balance.cuentasRechazadas}}</strong></article>
+  </div>
+
+  <div class="detail-grid balance-detail-grid" ng-if="vm.balance">
+    <div class="panel">
+      <h3>Pagos por metodo</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Metodo</th><th>Cantidad</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="metodo in vm.balance.pagosPorMetodo">
+              <td>{{metodo.metodoPago}}</td>
+              <td>{{metodo.cantidad}}</td>
+              <td>{{metodo.total | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.balance.pagosPorMetodo.length"><td colspan="3" class="muted">Sin pagos registrados</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Productos vendidos</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="producto in vm.balance.productos">
+              <td>{{producto.producto}}</td>
+              <td>{{producto.cantidad}}</td>
+              <td>{{producto.total | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.balance.productos.length"><td colspan="3" class="muted">Sin productos vendidos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" ng-if="vm.balance">
+    <h3>Cuentas del dia</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Numero</th><th>Mesa</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Pagado</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat-start="cuenta in vm.balance.cuentas">
+            <td>{{cuenta.numero}}</td>
+            <td>{{cuenta.mesa || '-'}}</td>
+            <td>{{cuenta.cliente || '-'}}</td>
+            <td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td>
+            <td>{{cuenta.total | currency:'$':0}}</td>
+            <td>{{cuenta.totalPagado | currency:'$':0}}</td>
+            <td>{{cuenta.saldoPendiente | currency:'$':0}}</td>
+            <td class="actions">
+              <button class="icon-btn" title="Ver detalle" ng-click="vm.toggleCuenta(cuenta)">
+                <i class="fa-solid" ng-class="vm.expanded[cuenta.id] ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              </button>
+            </td>
+          </tr>
+          <tr ng-repeat-end ng-if="vm.expanded[cuenta.id]" class="expanded-row">
+            <td colspan="8">
+              <div class="payments-collapse">
+                <strong>Productos de la cuenta</strong>
+                <div class="table-wrap account-products-collapse">
+                  <table>
+                    <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th></tr></thead>
+                    <tbody>
+                      <tr ng-repeat="item in cuenta.items" ng-class="{'deleted-item-row': item.eliminado}">
+                        <td>
+                          <strong>{{item.productoNombre}}</strong>
+                          <span class="deleted-badge" ng-if="item.eliminado">Eliminado</span>
+                          <small ng-if="item.eliminado && item.motivoEliminacion">{{item.motivoEliminacion}}</small>
+                        </td>
+                        <td>{{item.cantidad}}</td>
+                        <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.precioUnitario) | currency:'$':0}}</td>
+                        <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.total) | currency:'$':0}}</td>
+                      </tr>
+                      <tr ng-if="!cuenta.items.length"><td colspan="4" class="muted">Sin productos registrados</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <strong>Pagos registrados</strong>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Metodo</th><th>Recibido</th><th>Propina</th><th>Aplica cuenta</th><th>Referencia</th><th>Fecha</th></tr></thead>
+                    <tbody>
+                      <tr ng-repeat="pago in cuenta.pagos">
+                        <td>{{pago.metodoPago}}</td>
+                        <td>{{pago.valor | currency:'$':0}}</td>
+                        <td>{{pago.valorPropina | currency:'$':0}}</td>
+                        <td>{{pago.valorAplicadoCuenta | currency:'$':0}}</td>
+                        <td>{{pago.referencia || '-'}}</td>
+                        <td>{{pago.fechaPago | date:'short'}}</td>
+                      </tr>
+                      <tr ng-if="!cuenta.pagos.length"><td colspan="6" class="muted">Sin pagos registrados</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr ng-if="!vm.balance.cuentas.length"><td colspan="8" class="muted">Sin cuentas registradas hoy</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

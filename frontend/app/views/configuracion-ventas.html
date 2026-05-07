@@ -1,0 +1,27 @@
+<section class="page" ng-controller="ConfiguracionVentasController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Configuracion</span><h2>Configuracion de ventas</h2></div>
+  </div>
+
+  <form class="panel" ng-if="vm.form" ng-submit="vm.save()">
+    <div class="form-grid three">
+      <label class="check"><input type="checkbox" ng-model="vm.form.requiereAprobacionCierre"> Requiere aprobacion para cerrar cuenta</label>
+      <label class="check"><input type="checkbox" ng-model="vm.form.permiteDividirCuenta"> Permitir dividir cuenta</label>
+      <label class="check"><input type="checkbox" ng-model="vm.form.permiteEliminarItems"> Permitir eliminar items</label>
+      <label class="check"><input type="checkbox" ng-model="vm.form.requiereMotivoEliminarItem"> Motivo al eliminar item</label>
+      <label class="check"><input type="checkbox" ng-model="vm.form.requiereMotivoAnularCuenta"> Motivo al anular cuenta</label>
+      <label>Porcentaje reparto base<input type="number" step="0.01" ng-model="vm.form.porcentajeRepartoBase"></label>
+      <label>4x1000<input type="number" step="0.0001" ng-model="vm.form.tarifaCuatroPorMil"></label>
+      <label>Retefuente %<input type="number" step="0.0001" ng-model="vm.form.tarifaRetefuente"></label>
+      <label>Comision datafono %<input type="number" step="0.0001" ng-model="vm.form.tarifaComisionDatafono"></label>
+      <label>Ret ICA %<input type="number" step="0.0001" ng-model="vm.form.tarifaRetIca"></label>
+      <label>Comision fija datafono<input type="number" step="1" ng-model="vm.form.comisionFijaDatafono"></label>
+      <label>Propina por defecto %<input type="number" step="0.01" ng-model="vm.form.porcentajePropinaDefecto"></label>
+      <label>Inicio dia operativo<input ng-model="vm.form.horaInicioDiaOperativo" placeholder="06:00"></label>
+      <label>Cierre dia operativo<input ng-model="vm.form.horaCierreDiaOperativo" placeholder="05:59"></label>
+    </div>
+    <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+    <div class="alert success" ng-if="vm.saved">Configuracion guardada.</div>
+    <div class="modal-actions"><button class="btn primary" type="submit" ng-disabled="!vm.canEdit">Guardar</button></div>
+  </form>
+</section>

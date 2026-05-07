@@ -15,6 +15,7 @@ builder.Services.AddDbContext<MrsDrunkDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>

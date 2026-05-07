@@ -60,15 +60,10 @@ public sealed class RolesController(MrsDrunkDbContext db) : ControllerBase
             return NotFound();
         }
 
-        if (entity.EsSuperUsuario)
-        {
-            return BadRequest(new { message = "El rol SuperUsuario no se edita desde esta pantalla." });
-        }
-
-        entity.EmpresaId = request.EmpresaId;
+        entity.EmpresaId = entity.EsSuperUsuario ? null : request.EmpresaId;
         entity.Nombre = request.Nombre;
         entity.Descripcion = request.Descripcion;
-        entity.Estado = request.Estado;
+        entity.Estado = entity.EsSuperUsuario || request.Estado;
         entity.FechaModificacion = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();

@@ -11,32 +11,45 @@
     </label>
     <span class="success-text" ng-if="vm.message">{{vm.message}}</span>
   </div>
-  <div class="table-wrap">
-    <table class="permissions-table">
-      <thead><tr><th>Modulo</th><th>Ventana</th><th>Ver</th><th>Crear</th><th>Consultar</th><th>Editar</th><th>Eliminar</th><th>Permisos adicionales</th></tr></thead>
-      <tbody>
-        <tr ng-repeat="row in vm.grid">
-          <td>{{row.modulo}}</td>
-          <td>
-            <strong>{{row.ventana}}</strong>
-            <span class="cell-help">La opcion aparece en el menu cuando Ver esta activo.</span>
-          </td>
-          <td><input type="checkbox" ng-model="row.ver.puedeVer" ng-disabled="!vm.canConfigure || row.ver.missing" title="Permite entrar y consultar la ventana"></td>
-          <td><input type="checkbox" ng-model="row.crear.puedeCrear" ng-disabled="!vm.canConfigure || row.crear.missing" title="Permite crear registros"></td>
-          <td><input type="checkbox" ng-model="row.consultar.puedeConsultar" ng-disabled="!vm.canConfigure || row.consultar.missing" title="Permite abrir detalle o consultas puntuales"></td>
-          <td><input type="checkbox" ng-model="row.editar.puedeEditar" ng-disabled="!vm.canConfigure || row.editar.missing" title="Permite editar registros"></td>
-          <td><input type="checkbox" ng-model="row.eliminar.puedeEliminar" ng-disabled="!vm.canConfigure || row.eliminar.missing" title="Permite eliminar o inactivar registros"></td>
-          <td>
-            <div class="extra-permissions" ng-if="row.adicionales.length">
-              <label ng-repeat="permiso in row.adicionales">
-                <input type="checkbox" ng-model="permiso.puedeVer" ng-disabled="!vm.canConfigure">
-                <span>{{permiso.nombre}}</span>
-              </label>
-            </div>
-            <span class="cell-help" ng-if="!row.adicionales.length">Sin permisos adicionales</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="permission-module-list">
+    <section class="permission-module-panel" ng-repeat="group in vm.moduleGroups">
+      <div class="permission-module-header">
+        <div class="permission-module-title">
+          <i class="fa-solid {{group.icono}}"></i>
+          <div>
+            <span class="eyebrow">Modulo</span>
+            <h3>{{group.nombre}}</h3>
+          </div>
+        </div>
+        <span>{{group.rows.length}} ventanas</span>
+      </div>
+      <div class="table-wrap">
+        <table class="permissions-table">
+          <thead><tr><th>Ventana</th><th>Ver</th><th>Crear</th><th>Consultar</th><th>Editar</th><th>Eliminar</th><th>Permisos adicionales</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="row in group.rows">
+              <td>
+                <strong class="permission-window-title"><i class="fa-solid {{row.icono}}"></i>{{row.ventana}}</strong>
+                <span class="cell-help">La opcion aparece en el menu cuando Ver esta activo.</span>
+              </td>
+              <td><input type="checkbox" ng-model="row.ver.puedeVer" ng-disabled="!vm.canConfigure || row.ver.missing" title="Permite entrar y consultar la ventana"></td>
+              <td><input type="checkbox" ng-model="row.crear.puedeCrear" ng-disabled="!vm.canConfigure || row.crear.missing" title="Permite crear registros"></td>
+              <td><input type="checkbox" ng-model="row.consultar.puedeConsultar" ng-disabled="!vm.canConfigure || row.consultar.missing" title="Permite abrir detalle o consultas puntuales"></td>
+              <td><input type="checkbox" ng-model="row.editar.puedeEditar" ng-disabled="!vm.canConfigure || row.editar.missing" title="Permite editar registros"></td>
+              <td><input type="checkbox" ng-model="row.eliminar.puedeEliminar" ng-disabled="!vm.canConfigure || row.eliminar.missing" title="Permite eliminar o inactivar registros"></td>
+              <td>
+                <div class="extra-permissions" ng-if="row.adicionales.length">
+                  <label ng-repeat="permiso in row.adicionales">
+                    <input type="checkbox" ng-model="permiso.puedeVer" ng-disabled="!vm.canConfigure">
+                    <span>{{permiso.nombre}}</span>
+                  </label>
+                </div>
+                <span class="cell-help" ng-if="!row.adicionales.length">Sin permisos adicionales</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </section>

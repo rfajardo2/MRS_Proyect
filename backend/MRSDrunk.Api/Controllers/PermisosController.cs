@@ -28,26 +28,58 @@ public sealed class PermisosController(MrsDrunkDbContext db) : ControllerBase
     [RequirePermission("Seguridad.Permisos.Ver")]
     public async Task<ActionResult<IReadOnlyCollection<RolPermisoDto>>> GetByRol(int rolId, CancellationToken cancellationToken)
     {
-        var data = await db.RolPermisos.AsNoTracking()
+        var roleExists = await db.Roles.AsNoTracking().AnyAsync(x => x.Id == rolId, cancellationToken);
+        if (!roleExists)
+        {
+            return NotFound();
+        }
+
+        var permissionTemplates = await db.RolPermisos.AsNoTracking()
             .Include(x => x.Permiso)
             .Include(x => x.Ventana!).ThenInclude(x => x.Modulo)
-            .Where(x => x.RolId == rolId)
-            .OrderBy(x => x.Ventana!.Modulo!.Orden)
-            .ThenBy(x => x.Ventana!.Orden)
-            .Select(x => new RolPermisoDto(
-                x.Id,
-                x.RolId,
+            .Where(x => x.Permiso != null && x.Permiso.Estado && x.Ventana != null && x.Ventana.Estado && x.Ventana.Modulo != null && x.Ventana.Modulo.Estado)
+            .Select(x => new
+            {
                 x.PermisoId,
                 x.VentanaId,
-                x.Ventana!.Modulo!.Nombre,
-                x.Ventana.Nombre,
-                x.Permiso!.Nombre,
-                x.PuedeVer,
-                x.PuedeCrear,
-                x.PuedeConsultar,
-                x.PuedeEditar,
-                x.PuedeEliminar))
+                Modulo = x.Ventana!.Modulo!.Nombre,
+                ModuloOrden = x.Ventana.Modulo.Orden,
+                Ventana = x.Ventana.Nombre,
+                VentanaOrden = x.Ventana.Orden,
+                Permiso = x.Permiso!.Nombre,
+                PermisoCodigo = x.Permiso.Codigo
+            })
+            .Distinct()
             .ToListAsync(cancellationToken);
+
+        var assigned = await db.RolPermisos.AsNoTracking()
+            .Where(x => x.RolId == rolId)
+            .ToDictionaryAsync(x => $"{x.VentanaId}-{x.PermisoId}", cancellationToken);
+
+        var data = permissionTemplates
+            .OrderBy(x => x.ModuloOrden)
+            .ThenBy(x => x.VentanaOrden)
+            .ThenBy(x => x.PermisoCodigo)
+            .Select(x =>
+            {
+                assigned.TryGetValue($"{x.VentanaId}-{x.PermisoId}", out var saved);
+                return new RolPermisoDto(
+                    saved?.Id ?? 0,
+                    rolId,
+                    x.PermisoId,
+                    x.VentanaId,
+                    x.Modulo,
+                    x.Ventana,
+                    x.Permiso,
+                    x.PermisoCodigo,
+                    GetPermissionAction(x.PermisoCodigo),
+                    saved?.PuedeVer == true,
+                    saved?.PuedeCrear == true,
+                    saved?.PuedeConsultar == true,
+                    saved?.PuedeEditar == true,
+                    saved?.PuedeEliminar == true);
+            })
+            .ToList();
         return Ok(data);
     }
 
@@ -66,11 +98,6 @@ public sealed class PermisosController(MrsDrunkDbContext db) : ControllerBase
         if (role is null)
         {
             return NotFound();
-        }
-
-        if (role.EsSuperUsuario)
-        {
-            return BadRequest(new { message = "El SuperUsuario siempre tiene todos los permisos." });
         }
 
         foreach (var item in request.Permisos)
@@ -108,5 +135,19 @@ public sealed class PermisosController(MrsDrunkDbContext db) : ControllerBase
         }
 
         return NoContent();
+    }
+
+    private static string GetPermissionAction(string code)
+    {
+        var action = code.Split('.').LastOrDefault() ?? string.Empty;
+        return action switch
+        {
+            "Ver" => "Ver",
+            "Crear" => "Crear",
+            "Consultar" => "Consultar",
+            "Editar" => "Editar",
+            "Eliminar" => "Eliminar",
+            _ => action
+        };
     }
 }

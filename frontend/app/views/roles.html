@@ -14,7 +14,7 @@
           <td><span class="status" ng-class="{off: !role.estado}">{{role.estado ? 'Activo' : 'Inactivo'}}</span></td>
           <td class="actions">
             <span class="permission-tooltip" data-tooltip="{{vm.roleEditTooltip(role)}}">
-              <button class="icon-btn" ng-disabled="role.esSuperUsuario || !vm.canEdit" ng-click="vm.edit(role)"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn" ng-disabled="!vm.canEdit" ng-click="vm.edit(role)"><i class="fa-solid fa-pen"></i></button>
             </span>
             <span class="permission-tooltip" data-tooltip="{{vm.roleToggleTooltip(role)}}">
               <button class="icon-btn" ng-disabled="role.esSuperUsuario || !vm.canDelete" ng-click="vm.toggle(role)"><i class="fa-solid fa-power-off"></i></button>
