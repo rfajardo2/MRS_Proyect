@@ -11,6 +11,7 @@ public sealed class CuentaItem
     public decimal Descuento { get; set; }
     public decimal Total { get; set; }
     public bool Eliminado { get; set; }
+    public bool InventarioAplicado { get; set; }
     public string? MotivoEliminacion { get; set; }
     public int UsuarioCreacionId { get; set; }
     public int? UsuarioEliminacionId { get; set; }

@@ -1,50 +1,65 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('OperacionCuentasController', function (operacionService, productosService, configuracionService, authService) {
+  angular.module('mrsDrunkApp').controller('AdminUsuariosCuentasController', function (operacionService, productosService, configuracionService, authService) {
     var vm = this;
     vm.cuentas = [];
+    vm.filtered = [];
+    vm.usuarios = [];
     vm.productos = [];
     vm.selected = null;
-    vm.nueva = {};
+    vm.filters = { usuarioId: '', estado: '', texto: '' };
     vm.item = {};
     vm.pago = { metodoPago: 'Efectivo', incluyePropina: false, valorPropina: 0 };
     vm.configuracion = { porcentajePropinaDefecto: 10 };
-    vm.error = null;
-    vm.canCreate = authService.hasPermission('Operacion.Cuentas.Crear');
-    vm.canEdit = authService.hasPermission('Operacion.Cuentas.Editar');
-    vm.canDelete = authService.hasPermission('Operacion.Cuentas.Eliminar');
+    vm.canView = authService.hasPermission('AdministracionCuentas.Usuarios.Ver');
+    vm.canEdit = authService.hasPermission('AdministracionCuentas.Usuarios.Editar');
+    vm.canDelete = authService.hasPermission('AdministracionCuentas.Usuarios.Eliminar');
 
     vm.load = function () {
       authService.loadPermissions().then(function () {
-        vm.canCreate = authService.hasPermission('Operacion.Cuentas.Crear');
-        vm.canEdit = authService.hasPermission('Operacion.Cuentas.Editar');
-        vm.canDelete = authService.hasPermission('Operacion.Cuentas.Eliminar');
+        vm.canView = authService.hasPermission('AdministracionCuentas.Usuarios.Ver');
+        vm.canEdit = authService.hasPermission('AdministracionCuentas.Usuarios.Editar');
+        vm.canDelete = authService.hasPermission('AdministracionCuentas.Usuarios.Eliminar');
       });
-      operacionService.misCuentas().then(function (data) {
+
+      operacionService.cuentasUsuarios().then(function (data) {
         vm.cuentas = data;
+        vm.usuarios = buildUsuarios(data);
+        vm.applyFilters();
         if (vm.selected) {
           vm.selected = vm.cuentas.find(function (x) { return x.id === vm.selected.id; }) || null;
         }
-      });
-      productosService.catalogoOperacion().then(function (data) { vm.productos = data; }).catch(handleError);
-      configuracionService.ventasOperacion().then(function (data) { vm.configuracion = data; }).catch(handleError);
-    };
+      }).catch(handleError);
 
-    vm.crearCuenta = function () {
-      if (!vm.canCreate) { return; }
-      if (!vm.nueva.mesa && !vm.nueva.cliente) {
-        return showWarning('Datos incompletos', 'Indica al menos la mesa o el cliente para crear la cuenta.');
-      }
-      operacionService.crearCuenta(vm.nueva).then(function () {
-        vm.nueva = {};
-        showSuccess('Cuenta creada');
-        vm.load();
+      productosService.catalogoAdminCuentas().then(function (data) {
+        vm.productos = data;
+      }).catch(handleError);
+
+      configuracionService.ventasOperacion().then(function (data) {
+        vm.configuracion = data;
       }).catch(handleError);
     };
 
-    vm.select = function (cuenta) { vm.selected = cuenta; };
-    vm.isEditable = function (cuenta) { return cuenta && (cuenta.estado === 'Abierta' || cuenta.estado === 'Rechazada'); };
+    vm.applyFilters = function () {
+      var text = (vm.filters.texto || '').toLowerCase();
+      vm.filtered = vm.cuentas.filter(function (cuenta) {
+        var matchUsuario = !vm.filters.usuarioId || cuenta.meseroId === Number(vm.filters.usuarioId);
+        var matchEstado = !vm.filters.estado || cuenta.estado === vm.filters.estado;
+        var searchable = [cuenta.numero, cuenta.mesero, cuenta.mesa, cuenta.cliente].join(' ').toLowerCase();
+        return matchUsuario && matchEstado && (!text || searchable.indexOf(text) >= 0);
+      });
+    };
+
+    vm.select = function (cuenta) {
+      vm.selected = cuenta;
+      vm.item = {};
+      vm.pago = { metodoPago: 'Efectivo', incluyePropina: false, valorPropina: 0 };
+    };
+
+    vm.isEditable = function (cuenta) {
+      return cuenta && (cuenta.estado === 'Abierta' || cuenta.estado === 'Rechazada');
+    };
 
     vm.agregarItem = function () {
       if (!vm.selected || !vm.canEdit) { return; }
@@ -54,9 +69,9 @@
       if (!vm.item.cantidad || vm.item.cantidad <= 0) {
         return showWarning('Cantidad invalida', 'La cantidad debe ser mayor que cero.');
       }
-      operacionService.agregarItem(vm.selected.id, vm.item).then(function () {
-        vm.item = {};
+      operacionService.agregarItemUsuario(vm.selected.id, vm.item).then(function () {
         showSuccess('Producto agregado');
+        vm.item = {};
         vm.load();
       }).catch(handleError);
     };
@@ -77,19 +92,11 @@
         color: '#f7f7f8'
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
-        operacionService.eliminarItem(vm.selected.id, item.id, { motivo: result.value || '' }).then(function () {
+        operacionService.eliminarItemUsuario(vm.selected.id, item.id, { motivo: result.value || '' }).then(function () {
           showSuccess('Producto eliminado');
           vm.load();
         }).catch(handleError);
       });
-    };
-
-    vm.dividir = function () {
-      if (!vm.selected || !vm.canEdit) { return; }
-      operacionService.dividir(vm.selected.id, !vm.selected.dividida).then(function () {
-        showSuccess(vm.selected.dividida ? 'Division retirada' : 'Cuenta marcada como dividida');
-        vm.load();
-      }).catch(handleError);
     };
 
     vm.registrarPago = function () {
@@ -105,9 +112,9 @@
       if (vm.pago.valorPropina > vm.pago.valor) {
         return showWarning('Propina invalida', 'La propina no puede ser mayor que el valor recibido.');
       }
-      operacionService.registrarPago(vm.selected.id, vm.pago).then(function () {
-        vm.pago = { metodoPago: 'Efectivo', incluyePropina: false, valorPropina: 0 };
+      operacionService.registrarPagoUsuario(vm.selected.id, vm.pago).then(function () {
         showSuccess('Pago registrado');
+        vm.pago = { metodoPago: 'Efectivo', incluyePropina: false, valorPropina: 0 };
         vm.load();
       }).catch(handleError);
     };
@@ -126,11 +133,19 @@
         color: '#f7f7f8'
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
-        operacionService.eliminarPago(vm.selected.id, pago.id).then(function () {
+        operacionService.eliminarPagoUsuario(vm.selected.id, pago.id).then(function () {
           showSuccess('Pago eliminado');
           vm.load();
         }).catch(handleError);
       });
+    };
+
+    vm.dividir = function () {
+      if (!vm.selected || !vm.canEdit) { return; }
+      operacionService.dividirUsuario(vm.selected.id, !vm.selected.dividida).then(function () {
+        showSuccess(vm.selected.dividida ? 'Division retirada' : 'Cuenta marcada como dividida');
+        vm.load();
+      }).catch(handleError);
     };
 
     vm.togglePropina = function () {
@@ -138,11 +153,8 @@
         vm.pago.valorPropina = 0;
         return;
       }
-
-      var saldo = getSaldoCuenta();
-      var exceso = vm.pago.valor && vm.pago.valor > saldo ? vm.pago.valor - saldo : 0;
       if (!vm.pago.valorPropina || vm.pago.valorPropina <= 0) {
-        vm.pago.valorPropina = exceso > 0 ? exceso : vm.propinaSugerida();
+        vm.pago.valorPropina = vm.propinaSugerida();
       }
       vm.normalizarPagoConPropina();
     };
@@ -170,33 +182,17 @@
       }
     };
 
-    vm.solicitarCierre = function () {
-      if (!vm.selected || !vm.canEdit) { return; }
-      if (vm.selected.saldoPendiente > 0) {
-        return showWarning('Pago pendiente', 'La cuenta aun tiene saldo pendiente de ' + formatMoney(vm.selected.saldoPendiente) + '.');
-      }
-      Swal.fire({
-        title: 'Solicitar cierre',
-        text: 'Confirmas el cierre de la cuenta ' + vm.selected.numero + '?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Confirmar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
-      }).then(function (result) {
-        if (!result.isConfirmed) { return; }
-        operacionService.solicitarCierre(vm.selected.id).then(function () {
-          showSuccess('Cierre solicitado');
-          vm.load();
-        }).catch(handleError);
+    function buildUsuarios(cuentas) {
+      var map = {};
+      cuentas.forEach(function (cuenta) {
+        map[cuenta.meseroId] = { id: cuenta.meseroId, nombre: cuenta.mesero };
       });
-    };
+      return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre); });
+    }
 
     function handleError(err) {
       var message = err.status === 403
-        ? 'Tu rol no tiene permiso para esta accion. Revisa permisos del rol.'
+        ? 'Tu rol no tiene permiso para esta accion. Revisa permisos de Cuentas por usuario.'
         : (err.data && err.data.message ? err.data.message : 'No fue posible completar la operacion.');
       Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
     }

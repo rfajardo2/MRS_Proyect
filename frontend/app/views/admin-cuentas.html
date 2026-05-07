@@ -1,6 +1,6 @@
 <section class="page" ng-controller="AdminCuentasController as vm">
   <div class="page-title">
-    <div><span class="eyebrow">Administracion cuentas</span><h2>Cuentas de meseros</h2></div>
+    <div><span class="eyebrow">Administracion cuentas</span><h2>Cuentas de usuarios</h2></div>
   </div>
 
   <div class="metric-grid">
@@ -11,20 +11,106 @@
     </article>
   </div>
 
+  <div class="panel pending-accounts-panel">
+    <h3>Solicitudes pendientes</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Numero</th><th>Usuario</th><th>Mesa</th><th>Total</th><th>Pagado</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat-start="cuenta in vm.solicitudesPendientes">
+            <td>{{cuenta.numero}}</td>
+            <td>{{cuenta.mesero}}</td>
+            <td>{{cuenta.mesa || '-'}}</td>
+            <td>{{cuenta.total | currency:'$':0}}</td>
+            <td>{{cuenta.totalPagado | currency:'$':0}}</td>
+            <td>{{cuenta.saldoPendiente | currency:'$':0}}</td>
+            <td class="actions">
+              <button class="icon-btn" title="Ver pagos" ng-click="vm.togglePagos(cuenta)"><i class="fa-solid" ng-class="vm.expanded[cuenta.id] ? 'fa-chevron-up' : 'fa-chevron-down'"></i></button>
+              <button class="icon-btn" title="Aprobar" ng-click="vm.aprobar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-check"></i></button>
+              <button class="icon-btn" title="Rechazar" ng-click="vm.rechazar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-xmark"></i></button>
+              <button class="icon-btn" title="Anular" ng-click="vm.anular(cuenta)" ng-disabled="!vm.canDelete"><i class="fa-solid fa-ban"></i></button>
+            </td>
+          </tr>
+          <tr ng-repeat-end ng-if="vm.expanded[cuenta.id]" class="expanded-row">
+            <td colspan="7">
+              <div class="payments-collapse">
+                <strong>Pagos registrados</strong>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Metodo</th><th>Recibido</th><th>Propina</th><th>Aplica cuenta</th><th>Referencia</th><th>Fecha</th></tr></thead>
+                    <tbody>
+                      <tr ng-repeat="pago in cuenta.pagos">
+                        <td>{{pago.metodoPago}}</td>
+                        <td>{{pago.valor | currency:'$':0}}</td>
+                        <td>{{pago.valorPropina | currency:'$':0}}</td>
+                        <td>{{pago.valorAplicadoCuenta | currency:'$':0}}</td>
+                        <td>{{pago.referencia || '-'}}</td>
+                        <td>{{pago.fechaPago | date:'short'}}</td>
+                      </tr>
+                      <tr ng-if="!cuenta.pagos.length"><td colspan="6" class="muted">Sin pagos registrados</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="account-payment-summary">
+                  <span>Total cuenta: {{cuenta.total | currency:'$':0}}</span>
+                  <span>Pagado: {{cuenta.totalPagado | currency:'$':0}}</span>
+                  <span>Propina: {{cuenta.totalPropina | currency:'$':0}}</span>
+                  <span>Saldo: {{cuenta.saldoPendiente | currency:'$':0}}</span>
+                  <span ng-if="cuenta.pagoEnExceso > 0">Pago de mas: {{cuenta.pagoEnExceso | currency:'$':0}}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr ng-if="!vm.solicitudesPendientes.length"><td colspan="7" class="muted">No hay solicitudes pendientes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="panel">
     <h3>Cuentas recientes</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Numero</th><th>Mesero</th><th>Mesa</th><th>Estado</th><th>Total</th><th></th></tr></thead>
+        <thead><tr><th>Numero</th><th>Usuario</th><th>Mesa</th><th>Estado</th><th>Total</th><th>Pagado</th><th></th></tr></thead>
         <tbody>
-          <tr ng-repeat="cuenta in vm.cuentas">
-            <td>{{cuenta.numero}}</td><td>{{cuenta.mesero}}</td><td>{{cuenta.mesa}}</td><td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td><td>{{cuenta.total | currency:'$':0}}</td>
+          <tr ng-repeat-start="cuenta in vm.cuentasHistoricas">
+            <td>{{cuenta.numero}}</td><td>{{cuenta.mesero}}</td><td>{{cuenta.mesa}}</td><td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td><td>{{cuenta.total | currency:'$':0}}</td><td>{{cuenta.totalPagado | currency:'$':0}}</td>
             <td class="actions">
-              <button class="icon-btn" title="Aprobar" ng-if="cuenta.estado === 'PendienteAprobacion'" ng-click="vm.aprobar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-check"></i></button>
-              <button class="icon-btn" title="Rechazar" ng-if="cuenta.estado === 'PendienteAprobacion'" ng-click="vm.rechazar(cuenta)" ng-disabled="!vm.canEdit"><i class="fa-solid fa-xmark"></i></button>
+              <button class="icon-btn" title="Ver pagos" ng-click="vm.togglePagos(cuenta)"><i class="fa-solid" ng-class="vm.expanded[cuenta.id] ? 'fa-chevron-up' : 'fa-chevron-down'"></i></button>
               <button class="icon-btn" title="Anular" ng-click="vm.anular(cuenta)" ng-disabled="!vm.canDelete"><i class="fa-solid fa-ban"></i></button>
             </td>
           </tr>
+          <tr ng-repeat-end ng-if="vm.expanded[cuenta.id]" class="expanded-row">
+            <td colspan="7">
+              <div class="payments-collapse">
+                <strong>Pagos registrados</strong>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Metodo</th><th>Recibido</th><th>Propina</th><th>Aplica cuenta</th><th>Referencia</th><th>Fecha</th></tr></thead>
+                    <tbody>
+                      <tr ng-repeat="pago in cuenta.pagos">
+                        <td>{{pago.metodoPago}}</td>
+                        <td>{{pago.valor | currency:'$':0}}</td>
+                        <td>{{pago.valorPropina | currency:'$':0}}</td>
+                        <td>{{pago.valorAplicadoCuenta | currency:'$':0}}</td>
+                        <td>{{pago.referencia || '-'}}</td>
+                        <td>{{pago.fechaPago | date:'short'}}</td>
+                      </tr>
+                      <tr ng-if="!cuenta.pagos.length"><td colspan="6" class="muted">Sin pagos registrados</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="account-payment-summary">
+                  <span>Total cuenta: {{cuenta.total | currency:'$':0}}</span>
+                  <span>Pagado: {{cuenta.totalPagado | currency:'$':0}}</span>
+                  <span>Propina: {{cuenta.totalPropina | currency:'$':0}}</span>
+                  <span>Saldo: {{cuenta.saldoPendiente | currency:'$':0}}</span>
+                  <span ng-if="cuenta.pagoEnExceso > 0">Pago de mas: {{cuenta.pagoEnExceso | currency:'$':0}}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr ng-if="!vm.cuentasHistoricas.length"><td colspan="7" class="muted">Sin cuentas recientes</td></tr>
         </tbody>
       </table>
     </div>

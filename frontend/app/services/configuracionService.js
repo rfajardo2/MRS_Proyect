@@ -5,6 +5,7 @@
     var url = apiConfig.baseUrl + '/configuracion';
     return {
       ventas: function () { return $http.get(url + '/ventas').then(function (res) { return res.data; }); },
+      ventasOperacion: function () { return $http.get(url + '/ventas-operacion').then(function (res) { return res.data; }); },
       guardarVentas: function (data) { return $http.put(url + '/ventas', data); }
     };
   });

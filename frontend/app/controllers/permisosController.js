@@ -8,18 +8,18 @@
     vm.grid = [];
     vm.message = null;
     vm.permissionTooltip = 'No tiene permisos para realizar esta accion';
-    vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Configurar');
+    vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Editar');
 
     function refreshPermissions() {
       return authService.loadPermissions().then(function () {
-        vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Configurar');
+        vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Editar');
       });
     }
 
     vm.loadRoles = function () {
       refreshPermissions().finally(function () {
         rolesService.list().then(function (roles) {
-          vm.roles = roles.filter(function (role) { return !role.esSuperUsuario; });
+          vm.roles = roles;
           vm.selectedRole = vm.roles.length ? vm.roles[0].id : null;
           if (vm.selectedRole) {
             vm.loadGrid();
@@ -29,11 +29,10 @@
     };
 
     vm.loadGrid = function () {
-      $q.all([permisosService.windows(), permisosService.list(), permisosService.byRole(vm.selectedRole)])
+      $q.all([permisosService.windows(), permisosService.byRole(vm.selectedRole)])
         .then(function (responses) {
           var windows = responses[0];
-          var permisos = responses[1];
-          var assigned = responses[2];
+          var assigned = responses[1];
           var assignedMap = {};
 
           assigned.forEach(function (item) {
@@ -54,15 +53,15 @@
               adicionales: []
             };
 
-            permisos.filter(function (perm) {
-              return perm.codigo.indexOf(win.modulo + '.' + win.nombre + '.') === 0;
+            assigned.filter(function (perm) {
+              return perm.ventanaId === win.id;
             }).forEach(function (perm) {
-              var saved = assignedMap[win.id + '-' + perm.id] || {};
-              var action = getAction(perm.codigo);
+              var saved = assignedMap[win.id + '-' + perm.permisoId] || {};
+              var action = normalizeAction(perm.accion || getAction(perm.codigo));
               var model = {
-                permisoId: perm.id,
+                permisoId: perm.permisoId,
                 ventanaId: win.id,
-                nombre: perm.nombre,
+                nombre: perm.permiso,
                 codigo: perm.codigo,
                 action: action,
                 puedeVer: !!saved.puedeVer,
@@ -121,6 +120,14 @@
     function getAction(code) {
       var parts = (code || '').split('.');
       return parts.length ? parts[parts.length - 1] : '';
+    }
+
+    function normalizeAction(action) {
+      var normalized = (action || '').trim();
+      if (normalized === 'Inactivar') {
+        return 'Eliminar';
+      }
+      return normalized;
     }
 
     function toRequest(item, fieldName) {

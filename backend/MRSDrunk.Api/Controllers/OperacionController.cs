@@ -6,13 +6,14 @@ using MRSDrunk.Api.DTOs;
 using MRSDrunk.Api.Helpers;
 using MRSDrunk.Api.Middleware;
 using MRSDrunk.Api.Models;
+using MRSDrunk.Api.Services;
 
 namespace MRSDrunk.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public sealed class OperacionController(MrsDrunkDbContext db) : ControllerBase
+public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService inventarioService) : ControllerBase
 {
     [HttpGet("cuentas/mias")]
     [RequirePermission("Operacion.Cuentas.Ver")]
@@ -167,14 +168,48 @@ public sealed class OperacionController(MrsDrunkDbContext db) : ControllerBase
             return BadRequest(new { message = "El valor del pago debe ser mayor que cero." });
         }
 
+        if (request.ValorPropina < 0)
+        {
+            return BadRequest(new { message = "La propina no puede ser negativa." });
+        }
+
+        if (request.ValorPropina > request.Valor)
+        {
+            return BadRequest(new { message = "La propina no puede ser mayor que el valor recibido." });
+        }
+
         db.CuentaPagos.Add(new CuentaPago
         {
             CuentaId = cuenta.Id,
             MetodoPago = string.IsNullOrWhiteSpace(request.MetodoPago) ? "Efectivo" : request.MetodoPago.Trim(),
             Valor = request.Valor,
+            IncluyePropina = request.IncluyePropina || request.ValorPropina > 0,
+            ValorPropina = request.IncluyePropina || request.ValorPropina > 0 ? request.ValorPropina : 0,
             Referencia = Clean(request.Referencia),
             UsuarioRegistroId = User.GetUsuarioId()
         });
+        cuenta.FechaModificacion = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("cuentas/{cuentaId:int}/pagos/{pagoId:int}")]
+    [RequirePermission("Operacion.Cuentas.Editar")]
+    public async Task<IActionResult> EliminarPago(int cuentaId, int pagoId, CancellationToken cancellationToken)
+    {
+        var cuenta = await GetCuentaPropiaEditable(cuentaId, cancellationToken);
+        if (cuenta is null)
+        {
+            return NotFound();
+        }
+
+        var pago = await db.CuentaPagos.FirstOrDefaultAsync(x => x.Id == pagoId && x.CuentaId == cuenta.Id, cancellationToken);
+        if (pago is null)
+        {
+            return NotFound();
+        }
+
+        db.CuentaPagos.Remove(pago);
         cuenta.FechaModificacion = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
@@ -201,6 +236,7 @@ public sealed class OperacionController(MrsDrunkDbContext db) : ControllerBase
         {
             cuenta.Estado = "Cerrada";
             cuenta.FechaCierre = DateTime.UtcNow;
+            await inventarioService.AplicarSalidaVentaAsync(cuenta, User.GetUsuarioId(), cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -274,23 +310,54 @@ public sealed class OperacionController(MrsDrunkDbContext db) : ControllerBase
         cuenta.FechaModificacion = DateTime.UtcNow;
     }
 
-    internal static CuentaDto ToDto(Cuenta x) => new(
-        x.Id,
-        x.Numero,
-        x.Mesa,
-        x.Cliente,
-        x.Estado,
-        x.Dividida,
-        x.MeseroId,
-        x.Mesero?.NombreCompleto ?? "Mesero",
-        x.FechaApertura,
-        x.FechaSolicitudCierre,
-        x.FechaCierre,
-        x.Subtotal,
-        x.Descuento,
-        x.Total,
-        x.Items.OrderBy(i => i.Id).Select(i => new CuentaItemDto(i.Id, i.ProductoId, i.ProductoNombre, i.Cantidad, i.PrecioUnitario, i.Descuento, i.Total, i.Eliminado, i.MotivoEliminacion)).ToList(),
-        x.Pagos.OrderBy(i => i.Id).Select(i => new CuentaPagoDto(i.Id, i.MetodoPago, i.Valor, i.Referencia, i.FechaPago)).ToList());
+    internal static CuentaDto ToDto(Cuenta x)
+    {
+        var activeItems = x.Items.Where(i => !i.Eliminado).ToList();
+        var subtotal = activeItems.Sum(i => i.Cantidad * i.PrecioUnitario);
+        var descuento = activeItems.Sum(i => i.Descuento);
+        var total = activeItems.Sum(i => i.Total);
+        var pagos = x.Pagos.OrderBy(i => i.Id)
+            .Select(i =>
+            {
+                var valorPropina = i.IncluyePropina ? i.ValorPropina : 0;
+                return new CuentaPagoDto(
+                    i.Id,
+                    i.MetodoPago,
+                    i.Valor,
+                    i.IncluyePropina,
+                    valorPropina,
+                    Math.Max(0, i.Valor - valorPropina),
+                    i.Referencia,
+                    i.FechaPago);
+            })
+            .ToList();
+
+        var totalPagado = pagos.Sum(i => i.Valor);
+        var totalPropina = pagos.Sum(i => i.ValorPropina);
+        var totalAplicadoCuenta = pagos.Sum(i => i.ValorAplicadoCuenta);
+        return new CuentaDto(
+            x.Id,
+            x.Numero,
+            x.Mesa,
+            x.Cliente,
+            x.Estado,
+            x.Dividida,
+            x.MeseroId,
+            x.Mesero?.NombreCompleto ?? "Mesero",
+            x.FechaApertura,
+            x.FechaSolicitudCierre,
+            x.FechaCierre,
+            subtotal,
+            descuento,
+            total,
+            totalPagado,
+            totalPropina,
+            totalAplicadoCuenta,
+            Math.Max(0, total - totalAplicadoCuenta),
+            Math.Max(0, totalAplicadoCuenta - total),
+            x.Items.OrderBy(i => i.Id).Select(i => new CuentaItemDto(i.Id, i.ProductoId, i.ProductoNombre, i.Cantidad, i.PrecioUnitario, i.Descuento, i.Total, i.Eliminado, i.MotivoEliminacion)).ToList(),
+            pagos);
+    }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

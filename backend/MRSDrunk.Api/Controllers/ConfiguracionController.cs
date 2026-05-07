@@ -22,6 +22,14 @@ public sealed class ConfiguracionController(MrsDrunkDbContext db) : ControllerBa
         return Ok(ToDto(config));
     }
 
+    [HttpGet("ventas-operacion")]
+    [RequirePermission("Operacion.Cuentas.Ver")]
+    public async Task<ActionResult<ConfiguracionVentaDto>> GetVentasOperacion(CancellationToken cancellationToken)
+    {
+        var config = await GetOrCreate(User.GetEmpresaId(), cancellationToken);
+        return Ok(ToDto(config));
+    }
+
     [HttpPut("ventas")]
     [RequirePermission("Configuracion.Ventas.Editar")]
     public async Task<IActionResult> UpdateVentas(UpsertConfiguracionVentaRequest request, CancellationToken cancellationToken)
@@ -43,6 +51,7 @@ public sealed class ConfiguracionController(MrsDrunkDbContext db) : ControllerBa
         config.TarifaComisionDatafono = request.TarifaComisionDatafono;
         config.TarifaRetIca = request.TarifaRetIca;
         config.ComisionFijaDatafono = request.ComisionFijaDatafono;
+        config.PorcentajePropinaDefecto = request.PorcentajePropinaDefecto;
         config.HoraInicioDiaOperativo = inicio;
         config.HoraCierreDiaOperativo = cierre;
         config.FechaModificacion = DateTime.UtcNow;
@@ -77,6 +86,7 @@ public sealed class ConfiguracionController(MrsDrunkDbContext db) : ControllerBa
         x.TarifaComisionDatafono,
         x.TarifaRetIca,
         x.ComisionFijaDatafono,
+        x.PorcentajePropinaDefecto,
         x.HoraInicioDiaOperativo.ToString(@"hh\:mm"),
         x.HoraCierreDiaOperativo.ToString(@"hh\:mm"));
 }

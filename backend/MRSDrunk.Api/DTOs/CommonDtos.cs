@@ -111,6 +111,8 @@ public sealed record RolPermisoDto(
     string Modulo,
     string Ventana,
     string Permiso,
+    string Codigo,
+    string Accion,
     bool PuedeVer,
     bool PuedeCrear,
     bool PuedeConsultar,

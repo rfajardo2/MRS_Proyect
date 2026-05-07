@@ -1,25 +1,38 @@
-<section class="page" ng-controller="OperacionCuentasController as vm">
+<section class="page" ng-controller="AdminUsuariosCuentasController as vm">
   <div class="page-title">
-    <div><span class="eyebrow">Operacion</span><h2>Mis cuentas</h2></div>
+    <div><span class="eyebrow">Administracion cuentas</span><h2>Cuentas por usuario</h2></div>
   </div>
 
-  <form class="toolbar account-create-form" ng-submit="vm.crearCuenta()">
-    <input ng-model="vm.nueva.mesa" placeholder="Mesa">
-    <input ng-model="vm.nueva.cliente" placeholder="Cliente o referencia">
-    <input ng-model="vm.nueva.observacion" placeholder="Observacion">
-    <button class="btn primary" ng-disabled="!vm.canCreate"><i class="fa-solid fa-plus"></i><span>Crear cuenta</span></button>
+  <form class="toolbar account-create-form" ng-submit="$event.preventDefault()">
+    <select ng-model="vm.filters.usuarioId" ng-change="vm.applyFilters()" ng-options="u.id as u.nombre for u in vm.usuarios">
+      <option value="">Todos los usuarios</option>
+    </select>
+    <select ng-model="vm.filters.estado" ng-change="vm.applyFilters()">
+      <option value="">Todos los estados</option>
+      <option>Abierta</option>
+      <option>PendienteAprobacion</option>
+      <option>Rechazada</option>
+      <option>Cerrada</option>
+    </select>
+    <input ng-model="vm.filters.texto" ng-change="vm.applyFilters()" placeholder="Mesa, cliente o numero">
   </form>
 
   <div class="detail-grid operation-grid">
     <div class="panel">
-      <h3>Cuentas</h3>
+      <h3>Mesas y cuentas</h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Numero</th><th>Mesa</th><th>Estado</th><th>Total</th></tr></thead>
+          <thead><tr><th>Numero</th><th>Usuario</th><th>Mesa</th><th>Cliente</th><th>Estado</th><th>Total</th></tr></thead>
           <tbody>
-            <tr ng-repeat="cuenta in vm.cuentas" ng-click="vm.select(cuenta)">
-              <td>{{cuenta.numero}}</td><td>{{cuenta.mesa}}</td><td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td><td>{{cuenta.total | currency:'$':0}}</td>
+            <tr ng-repeat="cuenta in vm.filtered" ng-click="vm.select(cuenta)">
+              <td>{{cuenta.numero}}</td>
+              <td>{{cuenta.mesero}}</td>
+              <td>{{cuenta.mesa || '-'}}</td>
+              <td>{{cuenta.cliente || '-'}}</td>
+              <td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td>
+              <td>{{cuenta.total | currency:'$':0}}</td>
             </tr>
+            <tr ng-if="!vm.filtered.length"><td colspan="6" class="muted">No hay cuentas con esos filtros</td></tr>
           </tbody>
         </table>
       </div>
@@ -27,7 +40,7 @@
 
     <div class="panel" ng-if="vm.selected">
       <h3>Cuenta {{vm.selected.numero}}</h3>
-      <p>{{vm.selected.cliente || 'Sin cliente'}} - {{vm.selected.mesa || 'Sin mesa'}}</p>
+      <p>{{vm.selected.mesero}} - {{vm.selected.cliente || 'Sin cliente'}} - {{vm.selected.mesa || 'Sin mesa'}}</p>
       <form class="inline-form account-item-form" ng-submit="vm.agregarItem()" ng-if="vm.isEditable(vm.selected)">
         <select ng-model="vm.item.productoId" ng-options="p.id as p.nombre for p in vm.productos" required></select>
         <input type="number" step="0.001" ng-model="vm.item.cantidad" placeholder="Cantidad" required>
@@ -50,6 +63,7 @@
               <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.total) | currency:'$':0}}</td>
               <td class="actions"><button class="icon-btn" ng-if="!item.eliminado && vm.isEditable(vm.selected)" ng-click="vm.eliminarItem(item)" ng-disabled="!vm.canDelete"><i class="fa-solid fa-trash"></i></button></td>
             </tr>
+            <tr ng-if="!vm.selected.items.length"><td colspan="5" class="muted">Sin productos registrados</td></tr>
           </tbody>
         </table>
       </div>
@@ -87,7 +101,6 @@
         <span>Saldo: {{vm.selected.saldoPendiente | currency:'$':0}}</span>
         <span ng-if="vm.selected.pagoEnExceso > 0">Pago de mas: {{vm.selected.pagoEnExceso | currency:'$':0}}</span>
         <button class="btn ghost" ng-click="vm.dividir()" ng-disabled="!vm.canEdit || !vm.isEditable(vm.selected)">{{vm.selected.dividida ? 'Quitar division' : 'Marcar dividida'}}</button>
-        <button class="btn primary" ng-click="vm.solicitarCierre()" ng-disabled="!vm.canEdit || !vm.isEditable(vm.selected)">Solicitar cierre</button>
       </div>
     </div>
   </div>

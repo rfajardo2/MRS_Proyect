@@ -220,9 +220,11 @@ IF NOT EXISTS (SELECT 1 FROM Ventanas WHERE Ruta = '/operacion/cuentas')
 IF NOT EXISTS (SELECT 1 FROM Ventanas WHERE Ruta = '/operacion/balance')
     INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@OperacionId, 'Balance del dia', '/operacion/balance', 'fa-chart-line', 2, 1);
 IF NOT EXISTS (SELECT 1 FROM Ventanas WHERE Ruta = '/admin-cuentas')
-    INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@AdminCuentasId, 'Cuentas de meseros', '/admin-cuentas', 'fa-users-viewfinder', 1, 1);
+    INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@AdminCuentasId, 'Cuentas de usuarios', '/admin-cuentas', 'fa-users-viewfinder', 1, 1);
+IF NOT EXISTS (SELECT 1 FROM Ventanas WHERE Ruta = '/admin-cuentas/usuarios')
+    INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@AdminCuentasId, 'Cuentas por usuario', '/admin-cuentas/usuarios', 'fa-table-list', 2, 1);
 IF NOT EXISTS (SELECT 1 FROM Ventanas WHERE Ruta = '/admin-cuentas/balance')
-    INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@AdminCuentasId, 'Balance por usuario', '/admin-cuentas/balance', 'fa-scale-balanced', 2, 1);
+    INSERT INTO Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado) VALUES (@AdminCuentasId, 'Balance por usuario', '/admin-cuentas/balance', 'fa-scale-balanced', 3, 1);
 GO
 
 DECLARE @Permisos TABLE (Ruta NVARCHAR(160), Codigo NVARCHAR(120), Nombre NVARCHAR(120), Descripcion NVARCHAR(250));
@@ -243,6 +245,9 @@ INSERT INTO @Permisos VALUES
 ('/admin-cuentas', 'AdministracionCuentas.Cuentas.Ver', 'Ver cuentas de meseros', 'Consultar cuentas de todos los meseros'),
 ('/admin-cuentas', 'AdministracionCuentas.Cuentas.Editar', 'Aprobar cuentas', 'Aprobar o rechazar cierres'),
 ('/admin-cuentas', 'AdministracionCuentas.Cuentas.Eliminar', 'Anular cuentas', 'Anular cuentas'),
+('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Ver', 'Ver cuentas por usuario', 'Consultar mesas y cuentas creadas por usuarios'),
+('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Editar', 'Gestionar cuentas por usuario', 'Agregar productos, pagos y dividir cuentas de usuarios'),
+('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Eliminar', 'Eliminar items cuentas por usuario', 'Eliminar items de cuentas de usuarios'),
 ('/admin-cuentas/balance', 'AdministracionCuentas.Balance.Ver', 'Ver balance por usuario', 'Consultar balance por mesero');
 
 INSERT INTO Permisos (Codigo, Nombre, Descripcion, Estado)

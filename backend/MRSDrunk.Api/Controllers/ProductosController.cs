@@ -87,6 +87,38 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         return Ok(data);
     }
 
+    [HttpGet("catalogo-operacion")]
+    [RequirePermission("Operacion.Cuentas.Editar")]
+    public async Task<ActionResult<IReadOnlyCollection<ProductoDto>>> GetCatalogoOperacion(CancellationToken cancellationToken)
+    {
+        var empresaId = User.GetEmpresaId();
+        var productos = await db.Productos.AsNoTracking()
+            .Include(x => x.Categoria)
+            .Where(x => x.EmpresaId == empresaId && x.Estado && x.Categoria != null && x.Categoria.Estado)
+            .OrderBy(x => x.Categoria!.Orden)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync(cancellationToken);
+
+        var data = productos.Select(ToDto).ToList();
+        return Ok(data);
+    }
+
+    [HttpGet("catalogo-admin-cuentas")]
+    [RequirePermission("AdministracionCuentas.Usuarios.Editar")]
+    public async Task<ActionResult<IReadOnlyCollection<ProductoDto>>> GetCatalogoAdminCuentas(CancellationToken cancellationToken)
+    {
+        var empresaId = User.GetEmpresaId();
+        var productos = await db.Productos.AsNoTracking()
+            .Include(x => x.Categoria)
+            .Where(x => x.EmpresaId == empresaId && x.Estado && x.Categoria != null && x.Categoria.Estado)
+            .OrderBy(x => x.Categoria!.Orden)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync(cancellationToken);
+
+        var data = productos.Select(ToDto).ToList();
+        return Ok(data);
+    }
+
     [HttpPost]
     [RequirePermission("Productos.Productos.Crear")]
     public async Task<ActionResult<ProductoDto>> CrearProducto(UpsertProductoRequest request, CancellationToken cancellationToken)

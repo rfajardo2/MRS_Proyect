@@ -26,6 +26,9 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<Cuenta> Cuentas => Set<Cuenta>();
     public DbSet<CuentaItem> CuentaItems => Set<CuentaItem>();
     public DbSet<CuentaPago> CuentaPagos => Set<CuentaPago>();
+    public DbSet<CajaTurno> CajaTurnos => Set<CajaTurno>();
+    public DbSet<InventarioStock> InventarioStocks => Set<InventarioStock>();
+    public DbSet<InventarioMovimiento> InventarioMovimientos => Set<InventarioMovimiento>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +66,7 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaComisionDatafono).HasPrecision(18, 4);
         modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.TarifaRetIca).HasPrecision(18, 4);
         modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.ComisionFijaDatafono).HasPrecision(18, 2);
+        modelBuilder.Entity<ConfiguracionVenta>().Property(x => x.PorcentajePropinaDefecto).HasPrecision(18, 4);
         modelBuilder.Entity<ProductoCategoria>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
         modelBuilder.Entity<Producto>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
         modelBuilder.Entity<Producto>().Property(x => x.PrecioVenta).HasPrecision(18, 2);
@@ -77,5 +81,21 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<CuentaItem>().Property(x => x.Descuento).HasPrecision(18, 2);
         modelBuilder.Entity<CuentaItem>().Property(x => x.Total).HasPrecision(18, 2);
         modelBuilder.Entity<CuentaPago>().Property(x => x.Valor).HasPrecision(18, 2);
+        modelBuilder.Entity<CuentaPago>().Property(x => x.ValorPropina).HasPrecision(18, 2);
+        modelBuilder.Entity<InventarioStock>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.ProductoId }).IsUnique();
+        modelBuilder.Entity<InventarioStock>().Property(x => x.CantidadActual).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioStock>().Property(x => x.CantidadMinima).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioMovimiento>().Property(x => x.Cantidad).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioMovimiento>().Property(x => x.SaldoAnterior).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioMovimiento>().Property(x => x.SaldoNuevo).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioMovimiento>().Property(x => x.CostoUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.FechaOperativa }).IsUnique().HasFilter("[Estado] = 'Abierta'");
+        modelBuilder.Entity<CajaTurno>().Property(x => x.SaldoInicial).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.TotalVentas).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.TotalPagos).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.TotalEfectivo).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.EfectivoEsperado).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.EfectivoReal).HasPrecision(18, 2);
+        modelBuilder.Entity<CajaTurno>().Property(x => x.Diferencia).HasPrecision(18, 2);
     }
 }

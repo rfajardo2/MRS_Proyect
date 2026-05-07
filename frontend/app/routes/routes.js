@@ -60,14 +60,23 @@
       .when('/productos', {
         templateUrl: 'app/views/productos.html'
       })
+      .when('/productos/inventario', {
+        templateUrl: 'app/views/inventario.html'
+      })
       .when('/operacion/cuentas', {
         templateUrl: 'app/views/operacion-cuentas.html'
       })
       .when('/operacion/balance', {
         templateUrl: 'app/views/balance-dia.html'
       })
+      .when('/operacion/caja', {
+        templateUrl: 'app/views/caja.html'
+      })
       .when('/admin-cuentas', {
         templateUrl: 'app/views/admin-cuentas.html'
+      })
+      .when('/admin-cuentas/usuarios', {
+        templateUrl: 'app/views/admin-usuarios-cuentas.html'
       })
       .when('/admin-cuentas/balance', {
         templateUrl: 'app/views/admin-cuentas.html'
