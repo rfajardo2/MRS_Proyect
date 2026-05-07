@@ -1,31 +1,39 @@
-<section class="page" ng-controller="BalanceDiaController as vm">
+<section class="page" ng-controller="AdminBalanceGeneralController as vm">
   <div class="page-title">
-    <div><span class="eyebrow">Operacion</span><h2>Balance del dia</h2></div>
-  </div>
-  <div class="metric-grid" ng-if="vm.balance">
-    <article class="metric"><span>Cuentas abiertas</span><strong>{{vm.balance.cuentasAbiertas}}</strong></article>
-    <article class="metric"><span>Cuentas cerradas</span><strong>{{vm.balance.cuentasCerradas}}</strong></article>
-    <article class="metric"><span>Total vendido</span><strong>{{vm.balance.totalVendido | currency:'$':0}}</strong></article>
-    <article class="metric"><span>Total pagado</span><strong>{{vm.balance.totalPagado | currency:'$':0}}</strong></article>
-    <article class="metric"><span>Propinas</span><strong>{{vm.balance.totalPropinas | currency:'$':0}}</strong></article>
-    <article class="metric"><span>Saldo pendiente</span><strong>{{vm.balance.saldoPendiente | currency:'$':0}}</strong></article>
-    <article class="metric"><span>Pendientes aprobacion</span><strong>{{vm.balance.cuentasPendientes}}</strong></article>
-    <article class="metric"><span>Rechazadas</span><strong>{{vm.balance.cuentasRechazadas}}</strong></article>
+    <div><span class="eyebrow">Administracion cuentas</span><h2>Balance general del dia</h2></div>
+    <button class="btn ghost" type="button" ng-click="vm.load()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
   </div>
 
-  <div class="detail-grid balance-detail-grid" ng-if="vm.balance">
+  <form class="toolbar admin-user-filters" ng-submit="$event.preventDefault()">
+    <select ng-model="vm.filters.usuarioId" ng-change="vm.applyFilters()" ng-options="u.id as u.nombre for u in vm.usuarios">
+      <option value="">Todos los usuarios</option>
+    </select>
+  </form>
+
+  <div class="metric-grid" ng-if="vm.resumen">
+    <article class="metric"><span>Cuentas abiertas</span><strong>{{vm.resumen.cuentasAbiertas}}</strong></article>
+    <article class="metric"><span>Cuentas cerradas</span><strong>{{vm.resumen.cuentasCerradas}}</strong></article>
+    <article class="metric"><span>Total vendido</span><strong>{{vm.resumen.totalVendido | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Total pagado</span><strong>{{vm.resumen.totalPagado | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Propinas</span><strong>{{vm.resumen.totalPropinas | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Saldo pendiente</span><strong>{{vm.resumen.saldoPendiente | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Pendientes aprobacion</span><strong>{{vm.resumen.cuentasPendientes}}</strong></article>
+    <article class="metric"><span>Rechazadas</span><strong>{{vm.resumen.cuentasRechazadas}}</strong></article>
+  </div>
+
+  <div class="detail-grid balance-detail-grid" ng-if="vm.resumen">
     <div class="panel">
       <h3>Pagos por metodo</h3>
       <div class="table-wrap compact-table">
         <table>
           <thead><tr><th>Metodo</th><th>Cantidad</th><th>Total</th></tr></thead>
           <tbody>
-            <tr ng-repeat="metodo in vm.balance.pagosPorMetodo">
+            <tr ng-repeat="metodo in vm.resumen.pagosPorMetodo">
               <td>{{metodo.metodoPago}}</td>
               <td>{{metodo.cantidad}}</td>
               <td>{{metodo.total | currency:'$':0}}</td>
             </tr>
-            <tr ng-if="!vm.balance.pagosPorMetodo.length"><td colspan="3" class="muted">Sin pagos registrados</td></tr>
+            <tr ng-if="!vm.resumen.pagosPorMetodo.length"><td colspan="3" class="muted">Sin pagos registrados</td></tr>
           </tbody>
         </table>
       </div>
@@ -37,26 +45,27 @@
         <table>
           <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
           <tbody>
-            <tr ng-repeat="producto in vm.balance.productos">
+            <tr ng-repeat="producto in vm.resumen.productos">
               <td>{{producto.producto}}</td>
               <td>{{producto.cantidad}}</td>
               <td>{{producto.total | currency:'$':0}}</td>
             </tr>
-            <tr ng-if="!vm.balance.productos.length"><td colspan="3" class="muted">Sin productos vendidos</td></tr>
+            <tr ng-if="!vm.resumen.productos.length"><td colspan="3" class="muted">Sin productos vendidos</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <div class="panel" ng-if="vm.balance">
-    <h3>Cuentas del dia</h3>
+  <div class="panel" ng-if="vm.resumen">
+    <h3>Cuentas del turno</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Numero</th><th>Mesa</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Pagado</th><th>Saldo</th><th></th></tr></thead>
+        <thead><tr><th>Numero</th><th>Usuario</th><th>Mesa</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Pagado</th><th>Saldo</th><th></th></tr></thead>
         <tbody>
-          <tr ng-repeat-start="cuenta in vm.balance.cuentas">
+          <tr ng-repeat-start="cuenta in vm.resumen.cuentas">
             <td>{{cuenta.numero}}</td>
+            <td>{{cuenta.mesero}}</td>
             <td>{{cuenta.mesa || '-'}}</td>
             <td>{{cuenta.cliente || '-'}}</td>
             <td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td>
@@ -70,7 +79,7 @@
             </td>
           </tr>
           <tr ng-repeat-end ng-if="vm.expanded[cuenta.id]" class="expanded-row">
-            <td colspan="8">
+            <td colspan="9">
               <div class="payments-collapse">
                 <strong>Productos de la cuenta</strong>
                 <div class="table-wrap account-products-collapse">
@@ -111,7 +120,7 @@
               </div>
             </td>
           </tr>
-          <tr ng-if="!vm.balance.cuentas.length"><td colspan="8" class="muted">Sin cuentas registradas hoy</td></tr>
+          <tr ng-if="!vm.resumen.cuentas.length"><td colspan="9" class="muted">Sin cuentas en el turno</td></tr>
         </tbody>
       </table>
     </div>

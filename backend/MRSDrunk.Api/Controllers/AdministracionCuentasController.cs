@@ -288,6 +288,61 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
         return Ok(data);
     }
 
+    [HttpGet("balance-general-dia")]
+    [RequirePermission("AdministracionCuentas.Balance.Ver")]
+    public async Task<ActionResult<BalanceDiaDto>> BalanceGeneralDia(CancellationToken cancellationToken)
+    {
+        var empresaId = User.GetEmpresaId();
+        var sucursalId = User.GetSucursalId();
+        var turno = await db.CajaTurnos.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.SucursalId == sucursalId && x.Estado == "Abierta")
+            .OrderByDescending(x => x.FechaApertura)
+            .FirstOrDefaultAsync(cancellationToken);
+        var desde = turno?.FechaApertura ?? DateTime.UtcNow.Date;
+
+        var cuentas = await db.Cuentas.AsNoTracking()
+            .Include(x => x.Mesero)
+            .Include(x => x.Items)
+            .Include(x => x.Pagos)
+            .Where(x =>
+                x.EmpresaId == empresaId &&
+                x.SucursalId == sucursalId &&
+                x.FechaApertura >= desde &&
+                x.Estado != "Anulada")
+            .OrderByDescending(x => x.FechaApertura)
+            .ToListAsync(cancellationToken);
+
+        var pagos = cuentas.SelectMany(x => x.Pagos).ToList();
+        var pagosPorMetodo = pagos
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.MetodoPago) ? "Sin metodo" : x.MetodoPago)
+            .Select(g => new CajaMetodoPagoDto(g.Key, g.Sum(x => x.Valor), g.Count()))
+            .OrderBy(x => x.MetodoPago)
+            .ToList();
+        var productos = cuentas
+            .SelectMany(x => x.Items)
+            .Where(x => !x.Eliminado)
+            .GroupBy(x => x.ProductoNombre)
+            .Select(g => new BalanceDiaProductoDto(g.Key, g.Sum(x => x.Cantidad), g.Sum(x => x.Total)))
+            .OrderByDescending(x => x.Total)
+            .ToList();
+        var cuentaDtos = cuentas.Select(OperacionController.ToDto).ToList();
+
+        return Ok(new BalanceDiaDto(
+            0,
+            "General",
+            cuentas.Count(x => x.Estado == "Abierta" || x.Estado == "PendienteAprobacion"),
+            cuentas.Count(x => x.Estado == "Cerrada"),
+            cuentas.Count(x => x.Estado == "PendienteAprobacion"),
+            cuentas.Count(x => x.Estado == "Rechazada"),
+            cuentas.Where(x => x.Estado == "Cerrada").Sum(x => x.Total),
+            pagos.Sum(x => x.Valor),
+            pagos.Where(x => x.IncluyePropina).Sum(x => x.ValorPropina),
+            cuentaDtos.Sum(x => x.SaldoPendiente),
+            pagosPorMetodo,
+            productos,
+            cuentaDtos));
+    }
+
     private async Task<Cuenta?> GetCuentaEditable(int cuentaId, CancellationToken cancellationToken) =>
         await db.Cuentas
             .Include(x => x.Items)

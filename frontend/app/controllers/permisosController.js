@@ -6,6 +6,7 @@
     vm.roles = [];
     vm.selectedRole = null;
     vm.grid = [];
+    vm.moduleGroups = [];
     vm.message = null;
     vm.permissionTooltip = 'No tiene permisos para realizar esta accion';
     vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Editar');
@@ -44,6 +45,7 @@
             var row = {
               modulo: win.modulo,
               ventana: win.nombre,
+              icono: win.icono || 'fa-window-maximize',
               ventanaId: win.id,
               ver: createEmptyPermission(win.id, 'Ver'),
               crear: createEmptyPermission(win.id, 'Crear'),
@@ -88,6 +90,8 @@
 
             vm.grid.push(row);
           });
+
+          vm.moduleGroups = buildModuleGroups(vm.grid);
         });
     };
 
@@ -174,6 +178,39 @@
       });
 
       return result;
+    }
+
+    function buildModuleGroups(rows) {
+      var map = {};
+      var groups = [];
+      rows.forEach(function (row) {
+        if (!map[row.modulo]) {
+          map[row.modulo] = {
+            nombre: row.modulo,
+            icono: getModuleIcon(row.modulo),
+            rows: []
+          };
+          groups.push(map[row.modulo]);
+        }
+
+        map[row.modulo].rows.push(row);
+      });
+
+      return groups;
+    }
+
+    function getModuleIcon(moduleName) {
+      var icons = {
+        Dashboard: 'fa-gauge-high',
+        Seguridad: 'fa-shield-halved',
+        Configuracion: 'fa-gear',
+        Nomina: 'fa-money-check-dollar',
+        Productos: 'fa-martini-glass-citrus',
+        Operacion: 'fa-cash-register',
+        'Administracion cuentas': 'fa-clipboard-list'
+      };
+
+      return icons[moduleName] || 'fa-folder-tree';
     }
 
     vm.loadRoles();

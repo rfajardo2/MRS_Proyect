@@ -3,7 +3,7 @@
     <div><span class="eyebrow">Administracion cuentas</span><h2>Cuentas por usuario</h2></div>
   </div>
 
-  <form class="toolbar account-create-form" ng-submit="$event.preventDefault()">
+  <form class="toolbar admin-user-filters" ng-submit="$event.preventDefault()">
     <select ng-model="vm.filters.usuarioId" ng-change="vm.applyFilters()" ng-options="u.id as u.nombre for u in vm.usuarios">
       <option value="">Todos los usuarios</option>
     </select>
@@ -16,6 +16,37 @@
     </select>
     <input ng-model="vm.filters.texto" ng-change="vm.applyFilters()" placeholder="Mesa, cliente o numero">
   </form>
+
+  <div class="user-summary-grid" ng-if="vm.userSummaries.length">
+    <button type="button"
+            class="user-summary-card"
+            ng-repeat="summary in vm.userSummaries"
+            ng-click="vm.selectUserSummary(summary)"
+            ng-class="{active: vm.filters.usuarioId === summary.usuarioId}">
+      <div class="user-summary-head">
+        <span class="avatar mini">{{summary.nombre.charAt(0)}}</span>
+        <div>
+          <strong>{{summary.nombre}}</strong>
+          <small>{{summary.cuentas}} cuentas registradas</small>
+        </div>
+      </div>
+      <div class="user-summary-money">
+        <span>Total</span>
+        <strong>{{summary.total | currency:'$':0}}</strong>
+      </div>
+      <div class="user-summary-stats">
+        <span><b>{{summary.abiertas}}</b> Abiertas</span>
+        <span><b>{{summary.pendientes}}</b> Pendientes</span>
+        <span><b>{{summary.cerradas}}</b> Cerradas</span>
+        <span ng-if="summary.anuladas"><b>{{summary.anuladas}}</b> Anuladas</span>
+      </div>
+      <div class="user-summary-footer">
+        <span>Pagado: <b>{{summary.pagado | currency:'$':0}}</b></span>
+        <span>Saldo: <b>{{summary.saldo | currency:'$':0}}</b></span>
+        <span>Propina: <b>{{summary.propina | currency:'$':0}}</b></span>
+      </div>
+    </button>
+  </div>
 
   <div class="detail-grid operation-grid">
     <div class="panel">

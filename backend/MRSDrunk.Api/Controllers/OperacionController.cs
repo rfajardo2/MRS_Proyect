@@ -245,24 +245,49 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
 
     [HttpGet("balance-dia")]
     [RequirePermission("Operacion.Balance.Ver")]
-    public async Task<ActionResult<BalanceMeseroDto>> BalanceDia(CancellationToken cancellationToken)
+    public async Task<ActionResult<BalanceDiaDto>> BalanceDia(CancellationToken cancellationToken)
     {
         var usuarioId = User.GetUsuarioId();
         var desde = DateTime.UtcNow.Date;
         var cuentas = await db.Cuentas.AsNoTracking()
+            .Include(x => x.Items)
             .Include(x => x.Pagos)
             .Include(x => x.Mesero)
             .Where(x => x.EmpresaId == User.GetEmpresaId() && x.MeseroId == usuarioId && x.FechaApertura >= desde)
+            .OrderByDescending(x => x.FechaApertura)
             .ToListAsync(cancellationToken);
 
         var mesero = cuentas.FirstOrDefault()?.Mesero?.NombreCompleto ?? User.Identity?.Name ?? "Mesero";
-        return Ok(new BalanceMeseroDto(
+        var pagos = cuentas.SelectMany(x => x.Pagos).ToList();
+        var pagosPorMetodo = pagos
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.MetodoPago) ? "Sin metodo" : x.MetodoPago)
+            .Select(g => new CajaMetodoPagoDto(g.Key, g.Sum(x => x.Valor), g.Count()))
+            .OrderBy(x => x.MetodoPago)
+            .ToList();
+
+        var productos = cuentas
+            .SelectMany(x => x.Items)
+            .Where(x => !x.Eliminado)
+            .GroupBy(x => x.ProductoNombre)
+            .Select(g => new BalanceDiaProductoDto(g.Key, g.Sum(x => x.Cantidad), g.Sum(x => x.Total)))
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        var cuentaDtos = cuentas.Select(ToDto).ToList();
+        return Ok(new BalanceDiaDto(
             usuarioId,
             mesero,
             cuentas.Count(x => x.Estado == "Abierta" || x.Estado == "PendienteAprobacion"),
             cuentas.Count(x => x.Estado == "Cerrada"),
+            cuentas.Count(x => x.Estado == "PendienteAprobacion"),
+            cuentas.Count(x => x.Estado == "Rechazada"),
             cuentas.Where(x => x.Estado == "Cerrada").Sum(x => x.Total),
-            cuentas.SelectMany(x => x.Pagos).Sum(x => x.Valor)));
+            pagos.Sum(x => x.Valor),
+            pagos.Where(x => x.IncluyePropina).Sum(x => x.ValorPropina),
+            cuentaDtos.Sum(x => x.SaldoPendiente),
+            pagosPorMetodo,
+            productos,
+            cuentaDtos));
     }
 
     private IQueryable<Cuenta> BaseCuentasQuery() => db.Cuentas.AsNoTracking()

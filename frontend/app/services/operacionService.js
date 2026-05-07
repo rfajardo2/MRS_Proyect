@@ -27,7 +27,8 @@
       eliminarPagoUsuario: function (cuentaId, pagoId) { return $http.delete(adminUrl + '/usuarios-cuentas/' + cuentaId + '/pagos/' + pagoId); },
       resolverCierre: function (cuentaId, data) { return $http.post(adminUrl + '/' + cuentaId + '/resolver-cierre', data); },
       anular: function (cuentaId, data) { return $http.post(adminUrl + '/' + cuentaId + '/anular', data); },
-      balanceMeseros: function () { return $http.get(adminUrl + '/balance-meseros').then(function (res) { return res.data; }); }
+      balanceMeseros: function () { return $http.get(adminUrl + '/balance-meseros').then(function (res) { return res.data; }); },
+      balanceGeneralDia: function () { return $http.get(adminUrl + '/balance-general-dia').then(function (res) { return res.data; }); }
     };
   });
 })();

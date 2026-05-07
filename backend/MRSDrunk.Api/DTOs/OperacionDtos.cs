@@ -110,6 +110,23 @@ public sealed record AnularCuentaRequest(string? Motivo);
 
 public sealed record BalanceMeseroDto(int MeseroId, string Mesero, int CuentasAbiertas, int CuentasCerradas, decimal TotalVendido, decimal TotalPagado);
 
+public sealed record BalanceDiaProductoDto(string Producto, decimal Cantidad, decimal Total);
+
+public sealed record BalanceDiaDto(
+    int MeseroId,
+    string Mesero,
+    int CuentasAbiertas,
+    int CuentasCerradas,
+    int CuentasPendientes,
+    int CuentasRechazadas,
+    decimal TotalVendido,
+    decimal TotalPagado,
+    decimal TotalPropinas,
+    decimal SaldoPendiente,
+    IReadOnlyCollection<CajaMetodoPagoDto> PagosPorMetodo,
+    IReadOnlyCollection<BalanceDiaProductoDto> Productos,
+    IReadOnlyCollection<CuentaDto> Cuentas);
+
 public sealed record CajaMetodoPagoDto(string MetodoPago, decimal Total, int Cantidad);
 
 public sealed record CajaCuentaResumenDto(

@@ -40,6 +40,20 @@
     vm.cerrar = function () {
       if (!vm.turno || !vm.canClose) { return; }
       vm.error = null;
+      var cuentasAbiertas = getCuentasAbiertas();
+      if (cuentasAbiertas.length) {
+        return Swal.fire({
+          title: 'No se puede cerrar la caja',
+          html: 'Hay ' + cuentasAbiertas.length + ' cuenta(s) sin cerrar:<br><br><strong>' + cuentasAbiertas.map(function (cuenta) {
+            return cuenta.numero + ' - ' + cuenta.mesero + ' (' + cuenta.estado + ')';
+          }).join('<br>') + '</strong><br><br>Debes cerrar o anular esas cuentas antes de cerrar caja.',
+          icon: 'warning',
+          background: '#141417',
+          color: '#f7f7f8',
+          confirmButtonColor: '#ef233c'
+        });
+      }
+
       operacionService.cerrarCaja(vm.turno.id, vm.cierre).then(function () {
         vm.message = 'Caja cerrada correctamente.';
         vm.cierre = {};
@@ -57,6 +71,24 @@
 
     function handleError(err) {
       vm.error = err.data && err.data.message ? err.data.message : 'No fue posible completar la operacion.';
+      Swal.fire({
+        title: 'Atencion',
+        text: vm.error,
+        icon: 'error',
+        background: '#141417',
+        color: '#f7f7f8',
+        confirmButtonColor: '#ef233c'
+      });
+    }
+
+    function getCuentasAbiertas() {
+      if (!vm.turno || !vm.turno.cuentas) {
+        return [];
+      }
+
+      return vm.turno.cuentas.filter(function (cuenta) {
+        return cuenta.estado !== 'Cerrada';
+      });
     }
 
     vm.load();

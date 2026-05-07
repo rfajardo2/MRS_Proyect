@@ -104,6 +104,16 @@ public sealed class CajaController(MrsDrunkDbContext db) : ControllerBase
         }
 
         var resumen = await CalcularResumen(turno, cancellationToken);
+        var cuentasSinCerrar = resumen.Cuentas
+            .Where(x => !string.Equals(x.Estado, "Cerrada", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (cuentasSinCerrar.Count > 0)
+        {
+            var numeros = string.Join(", ", cuentasSinCerrar.Select(x => $"{x.Numero} ({x.Estado})"));
+            return BadRequest(new { message = $"No se puede cerrar la caja porque hay cuentas sin cerrar: {numeros}." });
+        }
+
         turno.TotalVentas = resumen.TotalVentas;
         turno.TotalPagos = resumen.TotalPagos;
         turno.TotalEfectivo = resumen.TotalEfectivo;

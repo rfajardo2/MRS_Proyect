@@ -1,6 +1,6 @@
 SET NOCOUNT ON;
 
 UPDATE dbo.Ventanas
-SET Nombre = 'Cuentas de usuarios'
+SET Nombre = 'Aprobacion de cuentas'
 WHERE Ruta = '/admin-cuentas'
-  AND Nombre <> 'Cuentas de usuarios';
+  AND Nombre <> 'Aprobacion de cuentas';

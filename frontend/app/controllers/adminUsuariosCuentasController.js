@@ -5,6 +5,7 @@
     var vm = this;
     vm.cuentas = [];
     vm.filtered = [];
+    vm.userSummaries = [];
     vm.usuarios = [];
     vm.productos = [];
     vm.selected = null;
@@ -49,6 +50,18 @@
         var searchable = [cuenta.numero, cuenta.mesero, cuenta.mesa, cuenta.cliente].join(' ').toLowerCase();
         return matchUsuario && matchEstado && (!text || searchable.indexOf(text) >= 0);
       });
+      vm.userSummaries = buildUserSummaries(vm.filtered);
+    };
+
+    vm.selectUserSummary = function (summary) {
+      if(vm.filters.usuarioId === summary.usuarioId) {
+        vm.filters.usuarioId = '';
+        vm.selected = null;
+      } else {
+        vm.filters.usuarioId = summary.usuarioId;
+      }
+     
+      vm.applyFilters();
     };
 
     vm.select = function (cuenta) {
@@ -188,6 +201,48 @@
         map[cuenta.meseroId] = { id: cuenta.meseroId, nombre: cuenta.mesero };
       });
       return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre); });
+    }
+
+    function buildUserSummaries(cuentas) {
+      var map = {};
+      cuentas.forEach(function (cuenta) {
+        var key = cuenta.meseroId || 0;
+        if (!map[key]) {
+          map[key] = {
+            usuarioId: cuenta.meseroId,
+            nombre: cuenta.mesero || 'Sin usuario',
+            cuentas: 0,
+            abiertas: 0,
+            pendientes: 0,
+            cerradas: 0,
+            anuladas: 0,
+            total: 0,
+            pagado: 0,
+            propina: 0,
+            saldo: 0
+          };
+        }
+
+        map[key].cuentas += 1;
+        map[key].total += Number(cuenta.total || 0);
+        map[key].pagado += Number(cuenta.totalPagado || 0);
+        map[key].propina += Number(cuenta.totalPropina || 0);
+        map[key].saldo += Number(cuenta.saldoPendiente || 0);
+
+        if (cuenta.estado === 'Abierta') {
+          map[key].abiertas += 1;
+        } else if (cuenta.estado === 'PendienteAprobacion') {
+          map[key].pendientes += 1;
+        } else if (cuenta.estado === 'Cerrada') {
+          map[key].cerradas += 1;
+        } else if (cuenta.estado === 'Anulada') {
+          map[key].anuladas += 1;
+        }
+      });
+
+      return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) {
+        return b.total - a.total || a.nombre.localeCompare(b.nombre);
+      });
     }
 
     function handleError(err) {

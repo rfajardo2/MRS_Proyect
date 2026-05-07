@@ -2,10 +2,17 @@ SET NOCOUNT ON;
 
 DECLARE @AdminCuentasId INT = (SELECT Id FROM dbo.Modulos WHERE Nombre = 'Administracion cuentas');
 
-IF @AdminCuentasId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Ventanas WHERE Ruta = '/admin-cuentas/usuarios')
+IF EXISTS (SELECT 1 FROM dbo.Ventanas WHERE Ruta = '/admin-cuentas/usuarios')
+BEGIN
+    UPDATE dbo.Ventanas
+    SET Ruta = '/cuentas-por-usuario'
+    WHERE Ruta = '/admin-cuentas/usuarios';
+END;
+
+IF @AdminCuentasId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Ventanas WHERE Ruta = '/cuentas-por-usuario')
 BEGIN
     INSERT INTO dbo.Ventanas (ModuloId, Nombre, Ruta, Icono, Orden, Estado)
-    VALUES (@AdminCuentasId, 'Cuentas por usuario', '/admin-cuentas/usuarios', 'fa-table-list', 2, 1);
+    VALUES (@AdminCuentasId, 'Cuentas por usuario', '/cuentas-por-usuario', 'fa-table-list', 2, 1);
 END;
 
 UPDATE dbo.Ventanas
@@ -13,11 +20,16 @@ SET Orden = 3
 WHERE Ruta = '/admin-cuentas/balance'
   AND Orden < 3;
 
+UPDATE dbo.Ventanas
+SET Nombre = 'Balance general del dia'
+WHERE Ruta = '/admin-cuentas/balance'
+  AND Nombre <> 'Balance general del dia';
+
 DECLARE @Permisos TABLE (Ruta NVARCHAR(160), Codigo NVARCHAR(120), Nombre NVARCHAR(120), Descripcion NVARCHAR(250));
 INSERT INTO @Permisos VALUES
-('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Ver', 'Ver cuentas por usuario', 'Consultar mesas y cuentas creadas por usuarios'),
-('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Editar', 'Gestionar cuentas por usuario', 'Agregar productos, pagos y dividir cuentas de usuarios'),
-('/admin-cuentas/usuarios', 'AdministracionCuentas.Usuarios.Eliminar', 'Eliminar items cuentas por usuario', 'Eliminar items de cuentas de usuarios');
+('/cuentas-por-usuario', 'AdministracionCuentas.Usuarios.Ver', 'Ver cuentas por usuario', 'Consultar mesas y cuentas creadas por usuarios'),
+('/cuentas-por-usuario', 'AdministracionCuentas.Usuarios.Editar', 'Gestionar cuentas por usuario', 'Agregar productos, pagos y dividir cuentas de usuarios'),
+('/cuentas-por-usuario', 'AdministracionCuentas.Usuarios.Eliminar', 'Eliminar items cuentas por usuario', 'Eliminar items de cuentas de usuarios');
 
 INSERT INTO dbo.Permisos (Codigo, Nombre, Descripcion, Estado)
 SELECT p.Codigo, p.Nombre, p.Descripcion, 1

@@ -76,10 +76,13 @@
         templateUrl: 'app/views/admin-cuentas.html'
       })
       .when('/admin-cuentas/usuarios', {
+        redirectTo: '/cuentas-por-usuario'
+      })
+      .when('/cuentas-por-usuario', {
         templateUrl: 'app/views/admin-usuarios-cuentas.html'
       })
       .when('/admin-cuentas/balance', {
-        templateUrl: 'app/views/admin-cuentas.html'
+        templateUrl: 'app/views/admin-balance-general.html'
       })
       .otherwise({ redirectTo: '/home' });
 
