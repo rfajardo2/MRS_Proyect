@@ -12,6 +12,14 @@
       vm.showPassword = !vm.showPassword;
     };
 
+    vm.goInicio = function () {
+      $location.path('/inicio');
+    };
+
+    vm.goMenu = function () {
+      $location.path('/menu');
+    };
+
     vm.login = function () {
       vm.loading = true;
       vm.error = null;

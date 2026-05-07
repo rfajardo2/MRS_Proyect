@@ -3,11 +3,25 @@
 
   angular.module('mrsDrunkApp').config(function ($routeProvider, $httpProvider) {
     $routeProvider
+      .when('/inicio', {
+        templateUrl: 'app/views/inicio.html',
+        controller: 'InicioController',
+        controllerAs: 'vm',
+        public: true,
+        redirectIfAuthenticated: true
+      })
+      .when('/menu', {
+        templateUrl: 'app/views/menu-publico.html',
+        controller: 'MenuPublicoController',
+        controllerAs: 'vm',
+        public: true
+      })
       .when('/login', {
         templateUrl: 'app/views/login.html',
         controller: 'LoginController',
         controllerAs: 'vm',
-        public: true
+        public: true,
+        redirectIfAuthenticated: true
       })
       .when('/home', {
         templateUrl: 'app/views/home.html'
@@ -84,7 +98,7 @@
       .when('/admin-cuentas/balance', {
         templateUrl: 'app/views/admin-balance-general.html'
       })
-      .otherwise({ redirectTo: '/home' });
+      .otherwise({ redirectTo: '/inicio' });
 
     $httpProvider.interceptors.push('httpInterceptor');
   });
@@ -93,10 +107,10 @@
     $rootScope.$on('$routeChangeStart', function (event, next) {
       if (!next.public && !authService.isAuthenticated()) {
         event.preventDefault();
-        $location.path('/login');
+        $location.path('/inicio');
       }
 
-      if (next.public && authService.isAuthenticated()) {
+      if (next.redirectIfAuthenticated && authService.isAuthenticated()) {
         event.preventDefault();
         $location.path('/home');
       }
