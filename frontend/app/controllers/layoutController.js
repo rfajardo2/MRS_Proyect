@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('LayoutController', function ($scope, $rootScope, $location, authService, menuService) {
+  angular.module('mrsDrunkApp').controller('LayoutController', function ($scope, $rootScope, $location, $window, authService, menuService) {
     var layout = this;
     layout.user = authService.getUser();
     layout.menu = [];
@@ -33,12 +33,23 @@
       layout.menu = [];
       layout.menuLoaded = false;
       layout.user = null;
-      $location.path('/login');
+      $location.path('/inicio');
     };
 
     layout.go = function (ruta) {
+      if (!ruta) {
+        return;
+      }
+
+      if (ruta === '/admin-cuentas/usuarios') {
+        ruta = '/cuentas-por-usuario';
+      }
+
       layout.sidebarOpen = false;
       $location.path(ruta);
+      if ($location.path() !== ruta) {
+        $window.location.hash = '#!' + ruta;
+      }
     };
 
     layout.isActive = function (ruta) {

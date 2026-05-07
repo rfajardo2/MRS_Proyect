@@ -3,11 +3,25 @@
 
   angular.module('mrsDrunkApp').config(function ($routeProvider, $httpProvider) {
     $routeProvider
+      .when('/inicio', {
+        templateUrl: 'app/views/inicio.html',
+        controller: 'InicioController',
+        controllerAs: 'vm',
+        public: true,
+        redirectIfAuthenticated: true
+      })
+      .when('/menu', {
+        templateUrl: 'app/views/menu-publico.html',
+        controller: 'MenuPublicoController',
+        controllerAs: 'vm',
+        public: true
+      })
       .when('/login', {
         templateUrl: 'app/views/login.html',
         controller: 'LoginController',
         controllerAs: 'vm',
-        public: true
+        public: true,
+        redirectIfAuthenticated: true
       })
       .when('/home', {
         templateUrl: 'app/views/home.html'
@@ -51,7 +65,40 @@
       .when('/nomina/periodos', {
         templateUrl: 'app/views/nomina.html'
       })
-      .otherwise({ redirectTo: '/home' });
+      .when('/configuracion/ventas', {
+        templateUrl: 'app/views/configuracion-ventas.html'
+      })
+      .when('/productos/categorias', {
+        templateUrl: 'app/views/productos.html'
+      })
+      .when('/productos', {
+        templateUrl: 'app/views/productos.html'
+      })
+      .when('/productos/inventario', {
+        templateUrl: 'app/views/inventario.html'
+      })
+      .when('/operacion/cuentas', {
+        templateUrl: 'app/views/operacion-cuentas.html'
+      })
+      .when('/operacion/balance', {
+        templateUrl: 'app/views/balance-dia.html'
+      })
+      .when('/operacion/caja', {
+        templateUrl: 'app/views/caja.html'
+      })
+      .when('/admin-cuentas', {
+        templateUrl: 'app/views/admin-cuentas.html'
+      })
+      .when('/admin-cuentas/usuarios', {
+        redirectTo: '/cuentas-por-usuario'
+      })
+      .when('/cuentas-por-usuario', {
+        templateUrl: 'app/views/admin-usuarios-cuentas.html'
+      })
+      .when('/admin-cuentas/balance', {
+        templateUrl: 'app/views/admin-balance-general.html'
+      })
+      .otherwise({ redirectTo: '/inicio' });
 
     $httpProvider.interceptors.push('httpInterceptor');
   });
@@ -60,10 +107,10 @@
     $rootScope.$on('$routeChangeStart', function (event, next) {
       if (!next.public && !authService.isAuthenticated()) {
         event.preventDefault();
-        $location.path('/login');
+        $location.path('/inicio');
       }
 
-      if (next.public && authService.isAuthenticated()) {
+      if (next.redirectIfAuthenticated && authService.isAuthenticated()) {
         event.preventDefault();
         $location.path('/home');
       }

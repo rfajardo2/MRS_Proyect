@@ -37,7 +37,7 @@
     };
 
     vm.edit = function (role) {
-      if (!vm.canEdit || role.esSuperUsuario) {
+      if (!vm.canEdit) {
         return;
       }
 
@@ -46,7 +46,7 @@
     };
 
     vm.save = function () {
-      if ((vm.form.id && !vm.canEdit) || (!vm.form.id && !vm.canCreate) || vm.form.esSuperUsuario) {
+      if ((vm.form.id && !vm.canEdit) || (!vm.form.id && !vm.canCreate)) {
         return;
       }
 
@@ -67,9 +67,7 @@
       rolesService.toggle(role.id).then(vm.load);
     };
 
-    vm.roleEditTooltip = function (role) {
-      return role.esSuperUsuario ? 'El rol SuperUsuario no se puede editar' : vm.permissionTooltip;
-    };
+    vm.roleEditTooltip = function () { return vm.permissionTooltip; };
 
     vm.roleToggleTooltip = function (role) {
       return role.esSuperUsuario ? 'El rol SuperUsuario no se puede inactivar' : vm.permissionTooltip;

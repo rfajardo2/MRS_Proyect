@@ -7,6 +7,12 @@ public static class ClaimsPrincipalExtensions
     public static int GetUsuarioId(this ClaimsPrincipal principal) => GetInt(principal, "usuarioId");
     public static int GetEmpresaId(this ClaimsPrincipal principal) => GetInt(principal, "empresaId");
     public static int GetRolId(this ClaimsPrincipal principal) => GetInt(principal, "rolId");
+    public static int? GetSucursalId(this ClaimsPrincipal principal)
+    {
+        var value = principal.FindFirstValue("sucursalId");
+        return int.TryParse(value, out var result) ? result : null;
+    }
+
     public static string GetNombreRol(this ClaimsPrincipal principal) => principal.FindFirstValue("nombreRol") ?? string.Empty;
 
     private static int GetInt(ClaimsPrincipal principal, string claimType)

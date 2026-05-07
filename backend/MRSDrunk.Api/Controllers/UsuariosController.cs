@@ -61,6 +61,8 @@ public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService 
                 x.Ventana!.Modulo!.Nombre,
                 x.Ventana.Nombre,
                 x.Permiso!.Nombre,
+                x.Permiso.Codigo,
+                x.Permiso.Codigo.Split('.', StringSplitOptions.None).LastOrDefault() ?? string.Empty,
                 x.PuedeVer,
                 x.PuedeCrear,
                 x.PuedeConsultar,

@@ -6,20 +6,21 @@
     vm.roles = [];
     vm.selectedRole = null;
     vm.grid = [];
+    vm.moduleGroups = [];
     vm.message = null;
     vm.permissionTooltip = 'No tiene permisos para realizar esta accion';
-    vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Configurar');
+    vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Editar');
 
     function refreshPermissions() {
       return authService.loadPermissions().then(function () {
-        vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Configurar');
+        vm.canConfigure = authService.hasPermission('Seguridad.Permisos.Editar');
       });
     }
 
     vm.loadRoles = function () {
       refreshPermissions().finally(function () {
         rolesService.list().then(function (roles) {
-          vm.roles = roles.filter(function (role) { return !role.esSuperUsuario; });
+          vm.roles = roles;
           vm.selectedRole = vm.roles.length ? vm.roles[0].id : null;
           if (vm.selectedRole) {
             vm.loadGrid();
@@ -29,11 +30,10 @@
     };
 
     vm.loadGrid = function () {
-      $q.all([permisosService.windows(), permisosService.list(), permisosService.byRole(vm.selectedRole)])
+      $q.all([permisosService.windows(), permisosService.byRole(vm.selectedRole)])
         .then(function (responses) {
           var windows = responses[0];
-          var permisos = responses[1];
-          var assigned = responses[2];
+          var assigned = responses[1];
           var assignedMap = {};
 
           assigned.forEach(function (item) {
@@ -45,6 +45,7 @@
             var row = {
               modulo: win.modulo,
               ventana: win.nombre,
+              icono: win.icono || 'fa-window-maximize',
               ventanaId: win.id,
               ver: createEmptyPermission(win.id, 'Ver'),
               crear: createEmptyPermission(win.id, 'Crear'),
@@ -54,15 +55,15 @@
               adicionales: []
             };
 
-            permisos.filter(function (perm) {
-              return perm.codigo.indexOf(win.modulo + '.' + win.nombre + '.') === 0;
+            assigned.filter(function (perm) {
+              return perm.ventanaId === win.id;
             }).forEach(function (perm) {
-              var saved = assignedMap[win.id + '-' + perm.id] || {};
-              var action = getAction(perm.codigo);
+              var saved = assignedMap[win.id + '-' + perm.permisoId] || {};
+              var action = normalizeAction(perm.accion || getAction(perm.codigo));
               var model = {
-                permisoId: perm.id,
+                permisoId: perm.permisoId,
                 ventanaId: win.id,
-                nombre: perm.nombre,
+                nombre: perm.permiso,
                 codigo: perm.codigo,
                 action: action,
                 puedeVer: !!saved.puedeVer,
@@ -89,6 +90,8 @@
 
             vm.grid.push(row);
           });
+
+          vm.moduleGroups = buildModuleGroups(vm.grid);
         });
     };
 
@@ -121,6 +124,14 @@
     function getAction(code) {
       var parts = (code || '').split('.');
       return parts.length ? parts[parts.length - 1] : '';
+    }
+
+    function normalizeAction(action) {
+      var normalized = (action || '').trim();
+      if (normalized === 'Inactivar') {
+        return 'Eliminar';
+      }
+      return normalized;
     }
 
     function toRequest(item, fieldName) {
@@ -167,6 +178,39 @@
       });
 
       return result;
+    }
+
+    function buildModuleGroups(rows) {
+      var map = {};
+      var groups = [];
+      rows.forEach(function (row) {
+        if (!map[row.modulo]) {
+          map[row.modulo] = {
+            nombre: row.modulo,
+            icono: getModuleIcon(row.modulo),
+            rows: []
+          };
+          groups.push(map[row.modulo]);
+        }
+
+        map[row.modulo].rows.push(row);
+      });
+
+      return groups;
+    }
+
+    function getModuleIcon(moduleName) {
+      var icons = {
+        Dashboard: 'fa-gauge-high',
+        Seguridad: 'fa-shield-halved',
+        Configuracion: 'fa-gear',
+        Nomina: 'fa-money-check-dollar',
+        Productos: 'fa-martini-glass-citrus',
+        Operacion: 'fa-cash-register',
+        'Administracion cuentas': 'fa-clipboard-list'
+      };
+
+      return icons[moduleName] || 'fa-folder-tree';
     }
 
     vm.loadRoles();

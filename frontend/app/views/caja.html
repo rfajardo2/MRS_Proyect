@@ -1,0 +1,107 @@
+<section class="page" ng-controller="CajaController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Operacion</span><h2>Caja</h2></div>
+    <button class="btn ghost" type="button" ng-click="vm.load()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
+  </div>
+
+  <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
+  <span class="success-text" ng-if="vm.message">{{vm.message}}</span>
+
+  <div class="cash-layout">
+    <form class="panel cash-open-panel" ng-submit="vm.abrir()" ng-if="!vm.turno">
+      <h3>Abrir caja</h3>
+      <p>Inicia el turno de caja para la sede actual.</p>
+      <label>Saldo inicial
+        <input type="number" step="1" min="0" ng-model="vm.apertura.saldoInicial" required>
+      </label>
+      <label>Observacion
+        <input ng-model="vm.apertura.observacion" placeholder="Opcional">
+      </label>
+      <button class="btn primary" type="submit" ng-disabled="!vm.canCreate"><i class="fa-solid fa-cash-register"></i><span>Abrir caja</span></button>
+    </form>
+
+    <div class="panel" ng-if="vm.turno">
+      <div class="panel-heading">
+        <div>
+          <h3>Caja abierta</h3>
+          <p>Abierta por {{vm.turno.usuarioApertura}} el {{vm.turno.fechaApertura | date:'dd/MM/yyyy HH:mm'}}</p>
+        </div>
+        <span class="status">{{vm.turno.estado}}</span>
+      </div>
+      <div class="metric-grid cash-metrics">
+        <div class="metric"><span>Saldo inicial</span><strong>{{vm.turno.saldoInicial | currency:'$':0}}</strong></div>
+        <div class="metric"><span>Ventas cerradas</span><strong>{{vm.turno.totalVentas | currency:'$':0}}</strong></div>
+        <div class="metric"><span>Pagos registrados</span><strong>{{vm.turno.totalPagos | currency:'$':0}}</strong></div>
+        <div class="metric"><span>Efectivo esperado</span><strong>{{vm.turno.efectivoEsperado | currency:'$':0}}</strong></div>
+      </div>
+
+      <div class="cash-columns">
+        <div>
+          <h3>Pagos por metodo</h3>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead><tr><th>Metodo</th><th>Cantidad</th><th>Total</th></tr></thead>
+              <tbody>
+                <tr ng-repeat="metodo in vm.turno.pagosPorMetodo">
+                  <td>{{metodo.metodoPago}}</td><td>{{metodo.cantidad}}</td><td>{{metodo.total | currency:'$':0}}</td>
+                </tr>
+                <tr ng-if="!vm.turno.pagosPorMetodo.length"><td colspan="3">Sin pagos registrados</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <form class="cash-close-form" ng-submit="vm.cerrar()">
+          <h3>Cierre de caja</h3>
+          <label>Efectivo real contado
+            <input type="number" step="1" min="0" ng-model="vm.cierre.efectivoReal" required>
+          </label>
+          <label>Observacion de cierre
+            <input ng-model="vm.cierre.observacion" placeholder="Opcional">
+          </label>
+          <div class="cash-difference" ng-if="vm.diferenciaPreview() !== null" ng-class="{negative: vm.diferenciaPreview() < 0}">
+            <span>Diferencia estimada</span>
+            <strong>{{vm.diferenciaPreview() | currency:'$':0}}</strong>
+          </div>
+          <button class="btn primary" type="submit" ng-disabled="!vm.canClose"><i class="fa-solid fa-lock"></i><span>Cerrar caja</span></button>
+        </form>
+      </div>
+
+      <h3>Cuentas del turno</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Numero</th><th>Mesero</th><th>Estado</th><th>Total</th><th>Pagado</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="cuenta in vm.turno.cuentas">
+              <td>{{cuenta.numero}}</td>
+              <td>{{cuenta.mesero}}</td>
+              <td><span class="status" ng-class="{off: cuenta.estado !== 'Cerrada'}">{{cuenta.estado}}</span></td>
+              <td>{{cuenta.total | currency:'$':0}}</td>
+              <td>{{cuenta.totalPagado | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.turno.cuentas.length"><td colspan="5">Sin cuentas en este turno</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Historial reciente</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Fecha</th><th>Estado</th><th>Esperado</th><th>Real</th><th>Diferencia</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="turno in vm.turnos">
+              <td>{{turno.fechaApertura | date:'dd/MM/yyyy HH:mm'}}</td>
+              <td><span class="status" ng-class="{off: turno.estado !== 'Abierta'}">{{turno.estado}}</span></td>
+              <td>{{turno.efectivoEsperado | currency:'$':0}}</td>
+              <td>{{turno.efectivoReal | currency:'$':0}}</td>
+              <td>{{turno.diferencia | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.turnos.length"><td colspan="5">Sin turnos registrados</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
