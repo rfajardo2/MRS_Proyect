@@ -1,72 +1,284 @@
 <section class="page" ng-controller="ProductosController as vm">
   <div class="page-title">
-    <div><span class="eyebrow">Productos</span><h2>Carta y categorias</h2></div>
+    <div>
+      <span class="eyebrow">Productos</span>
+      <h2>{{vm.mode === 'categorias' ? 'Categorias' : 'Productos'}}</h2>
+    </div>
     <div class="actions">
-      <button class="btn ghost" ng-click="vm.newCategoria()" ng-disabled="!vm.canCreateCategoria"><i class="fa-solid fa-layer-group"></i><span>Nueva categoria</span></button>
-      <button class="btn primary" ng-click="vm.newProducto()" ng-disabled="!vm.canCreateProducto"><i class="fa-solid fa-plus"></i><span>Nuevo producto</span></button>
+      <button class="btn ghost" type="button" ng-click="vm.goCategorias()" ng-class="{active: vm.mode === 'categorias'}">
+        <i class="fa-solid fa-layer-group"></i><span>Categorias</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.goProductos()" ng-class="{active: vm.mode === 'productos'}">
+        <i class="fa-solid fa-martini-glass-citrus"></i><span>Productos</span>
+      </button>
+      <button class="btn primary" type="button" ng-if="vm.mode === 'categorias'" ng-click="vm.newCategoria()" ng-disabled="!vm.canCreateCategoria">
+        <i class="fa-solid fa-plus"></i><span>Nueva categoria</span>
+      </button>
+      <button class="btn primary" type="button" ng-if="vm.mode === 'productos'" ng-click="vm.newProducto()" ng-disabled="!vm.canCreateProducto || !vm.categoriasActivas.length">
+        <i class="fa-solid fa-plus"></i><span>Nuevo producto</span>
+      </button>
+      <button class="btn ghost" type="button" ng-if="vm.mode === 'productos'" ng-click="vm.openImport()" ng-disabled="!vm.canCreateProducto">
+        <i class="fa-solid fa-file-import"></i><span>Importar</span>
+      </button>
     </div>
   </div>
 
-  <div class="panel">
-    <h3>Categorias</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Orden</th><th>Nombre</th><th>Descripcion</th><th>Estado</th><th></th></tr></thead>
-        <tbody>
-          <tr ng-repeat="cat in vm.categorias">
-            <td>{{cat.orden}}</td><td>{{cat.nombre}}</td><td>{{cat.descripcion}}</td>
-            <td><span class="status" ng-class="{off: !cat.estado}">{{cat.estado ? 'Activa' : 'Inactiva'}}</span></td>
-            <td class="actions"><button class="icon-btn" ng-click="vm.editCategoria(cat)" ng-disabled="!vm.canEditCategoria"><i class="fa-solid fa-pen"></i></button></td>
+  <div class="metric-grid product-metrics">
+    <div class="metric">
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Categorias activas</span>
+      <strong>{{vm.stats.categoriasActivas}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-martini-glass-citrus"></i>
+      <span>Productos activos</span>
+      <strong>{{vm.stats.productosActivos}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Controlan inventario</span>
+      <strong>{{vm.stats.conInventario}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-ban"></i>
+      <span>Inactivos</span>
+      <strong>{{vm.stats.inactivos}}</strong>
+    </div>
+  </div>
+
+  <div class="toolbar product-toolbar">
+    <input ng-model="vm.filters.search" placeholder="{{vm.mode === 'categorias' ? 'Buscar categoria' : 'Buscar producto, categoria o descripcion'}}">
+    <select ng-model="vm.filters.estado">
+      <option value="">Todos los estados</option>
+      <option value="true">Activos</option>
+      <option value="false">Inactivos</option>
+    </select>
+    <select ng-model="vm.filters.categoriaId" ng-if="vm.mode === 'productos'">
+      <option value="">Todas las categorias</option>
+      <option ng-repeat="cat in vm.categorias" value="{{cat.id}}">{{cat.nombre}}</option>
+    </select>
+    <label class="check compact" ng-if="vm.mode === 'productos'">
+      <input type="checkbox" ng-model="vm.filters.soloInventario"> Solo inventario
+    </label>
+    <button class="btn ghost" type="button" ng-click="vm.clearFilters()">
+      <i class="fa-solid fa-filter-circle-xmark"></i><span>Limpiar</span>
+    </button>
+  </div>
+
+  <div class="alert error" ng-if="vm.mode === 'productos' && !vm.categoriasActivas.length">
+    Crea al menos una categoria activa antes de registrar productos.
+  </div>
+
+  <div class="panel" ng-if="vm.mode === 'categorias'">
+    <div class="panel-heading">
+      <h3>Catalogo de categorias</h3>
+      <span class="success-text">{{vm.filteredCategorias().length}} registros</span>
+    </div>
+    <div class="table-wrap product-table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Nombre</th>
+            <th>Descripcion</th>
+            <th>Productos</th>
+            <th>Estado</th>
+            <th></th>
           </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="cat in vm.filteredCategorias()" ng-class="{muted: !cat.estado}">
+            <td>{{cat.orden}}</td>
+            <td><strong>{{cat.nombre}}</strong></td>
+            <td>{{cat.descripcion || '-'}}</td>
+            <td>{{vm.countProductosCategoria(cat.id)}}</td>
+            <td><span class="status" ng-class="{off: !cat.estado}">{{cat.estado ? 'Activa' : 'Inactiva'}}</span></td>
+            <td class="actions">
+              <button class="icon-btn" type="button" ng-click="vm.editCategoria(cat)" ng-disabled="!vm.canEditCategoria" title="Editar categoria">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+            </td>
+          </tr>
+          <tr ng-if="!vm.filteredCategorias().length"><td colspan="6">No hay categorias para los filtros seleccionados.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <div class="panel">
-    <h3>Productos</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Categoria</th><th>Producto</th><th>Precio</th><th>Costo</th><th>Inventario</th><th>Estado</th><th></th></tr></thead>
-        <tbody>
-          <tr ng-repeat="prod in vm.productos">
-            <td>{{prod.categoria}}</td><td>{{prod.nombre}}</td><td>{{prod.precioVenta | currency:'$':0}}</td><td>{{prod.costoEstimado | currency:'$':0}}</td>
-            <td>{{prod.controlaInventario ? 'Si' : 'No'}}</td>
-            <td><span class="status" ng-class="{off: !prod.estado}">{{prod.estado ? 'Activo' : 'Inactivo'}}</span></td>
-            <td class="actions"><button class="icon-btn" ng-click="vm.editProducto(prod)" ng-disabled="!vm.canEditProducto"><i class="fa-solid fa-pen"></i></button></td>
+  <div class="panel" ng-if="vm.mode === 'productos'">
+    <div class="panel-heading">
+      <h3>Carta de productos</h3>
+      <span class="success-text">{{vm.filteredProductos().length}} registros</span>
+    </div>
+    <div class="table-wrap product-table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Costo</th>
+            <th>Margen</th>
+            <th>Unidad</th>
+            <th>Inventario</th>
+            <th>Estado</th>
+            <th></th>
           </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="prod in vm.filteredProductos()" ng-class="{muted: !prod.estado}">
+            <td>{{prod.categoria}}</td>
+            <td>
+              <strong>{{prod.nombre}}</strong>
+              <small class="cell-help">{{prod.descripcion || 'Sin descripcion'}}</small>
+            </td>
+            <td>{{prod.precioVenta | currency:'$':0}}</td>
+            <td>{{(prod.costoEstimado || 0) | currency:'$':0}}</td>
+            <td>{{vm.margenProducto(prod) | currency:'$':0}}</td>
+            <td>{{prod.unidadVenta || '-'}} / {{prod.unidadInventario || '-'}}</td>
+            <td><span class="status" ng-class="{off: !prod.controlaInventario}">{{prod.controlaInventario ? 'Controlado' : 'No controla'}}</span></td>
+            <td><span class="status" ng-class="{off: !prod.estado}">{{prod.estado ? 'Activo' : 'Inactivo'}}</span></td>
+            <td class="actions">
+              <button class="icon-btn" type="button" ng-click="vm.openReceta(prod)" ng-disabled="!vm.canEditProducto" title="Receta / consumo">
+                <i class="fa-solid fa-list-check"></i>
+              </button>
+              <button class="icon-btn" type="button" ng-click="vm.editProducto(prod)" ng-disabled="!vm.canEditProducto" title="Editar producto">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+            </td>
+          </tr>
+          <tr ng-if="!vm.filteredProductos().length"><td colspan="9">No hay productos para los filtros seleccionados.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <div class="modal-backdrop" ng-if="vm.categoriaModal">
-    <form class="modal" ng-submit="vm.saveCategoria()">
-      <div class="modal-head"><h3>Categoria</h3><button type="button" class="icon-btn" ng-click="vm.categoriaModal=false"><i class="fa-solid fa-xmark"></i></button></div>
+    <form name="categoriaForm" class="modal" ng-submit="vm.saveCategoria(categoriaForm)" novalidate>
+      <div class="modal-head">
+        <h3>{{vm.categoriaForm.id ? 'Editar categoria' : 'Nueva categoria'}}</h3>
+        <button type="button" class="icon-btn" ng-click="vm.categoriaModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       <div class="form-grid">
-        <label>Nombre<input ng-model="vm.categoriaForm.nombre" required></label>
-        <label>Orden<input type="number" ng-model="vm.categoriaForm.orden"></label>
-        <label class="wide">Descripcion<input ng-model="vm.categoriaForm.descripcion"></label>
+        <label>Nombre
+          <input name="nombre" ng-model="vm.categoriaForm.nombre" maxlength="80" required placeholder="Ej: Cocteles">
+          <small class="field-hint">Obligatorio, maximo 80 caracteres.</small>
+        </label>
+        <label>Orden
+          <input name="orden" type="number" min="0" step="1" ng-model="vm.categoriaForm.orden" required>
+          <small class="field-hint">Define el orden en carta y formularios.</small>
+        </label>
+        <label class="wide">Descripcion
+          <input ng-model="vm.categoriaForm.descripcion" maxlength="250" placeholder="Descripcion interna o visible">
+        </label>
         <label class="check"><input type="checkbox" ng-model="vm.categoriaForm.estado"> Activa</label>
       </div>
-      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.categoriaModal=false">Cancelar</button><button class="btn primary">Guardar</button></div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.categoriaModal=false">Cancelar</button>
+        <button class="btn primary" type="submit" ng-disabled="vm.saving">Guardar</button>
+      </div>
     </form>
   </div>
 
   <div class="modal-backdrop" ng-if="vm.productoModal">
-    <form class="modal" ng-submit="vm.saveProducto()">
-      <div class="modal-head"><h3>Producto</h3><button type="button" class="icon-btn" ng-click="vm.productoModal=false"><i class="fa-solid fa-xmark"></i></button></div>
+    <form name="productoForm" class="modal" ng-submit="vm.saveProducto(productoForm)" novalidate>
+      <div class="modal-head">
+        <h3>{{vm.productoForm.id ? 'Editar producto' : 'Nuevo producto'}}</h3>
+        <button type="button" class="icon-btn" ng-click="vm.productoModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       <div class="form-grid">
-        <label>Categoria<select ng-model="vm.productoForm.categoriaId" ng-options="c.id as c.nombre for c in vm.categorias" required></select></label>
-        <label>Nombre<input ng-model="vm.productoForm.nombre" required></label>
-        <label>Precio venta<input type="number" step="1" ng-model="vm.productoForm.precioVenta"></label>
-        <label>Costo estimado<input type="number" step="1" ng-model="vm.productoForm.costoEstimado"></label>
+        <label>Categoria
+          <select name="categoriaId" ng-model="vm.productoForm.categoriaId" ng-options="c.id as c.nombre for c in vm.categoriasActivas" required></select>
+          <small class="field-hint">Solo se pueden asignar categorias activas.</small>
+        </label>
+        <label>Nombre
+          <input name="nombre" ng-model="vm.productoForm.nombre" maxlength="120" required placeholder="Ej: Margarita Clasica">
+        </label>
+        <label>Precio venta
+          <input name="precioVenta" type="number" step="1" min="1" ng-model="vm.productoForm.precioVenta" required>
+        </label>
+        <label>Costo estimado
+          <input name="costoEstimado" type="number" step="1" min="0" ng-model="vm.productoForm.costoEstimado" placeholder="Opcional">
+        </label>
+        <label>Unidad venta
+          <select ng-model="vm.productoForm.unidadVentaId" ng-options="u.id as u.nombre for u in vm.unidades"></select>
+        </label>
+        <label>Unidad inventario
+          <select ng-model="vm.productoForm.unidadInventarioId" ng-options="u.id as u.nombre for u in vm.unidades"></select>
+        </label>
+        <label>Factor inventario
+          <input type="number" step="0.000001" min="0.000001" ng-model="vm.productoForm.factorConversionInventario">
+          <small class="field-hint">Cantidad de inventario que descuenta una unidad vendida si no tiene receta.</small>
+        </label>
         <label class="check"><input type="checkbox" ng-model="vm.productoForm.controlaInventario"> Controla inventario</label>
         <label class="check"><input type="checkbox" ng-model="vm.productoForm.estado"> Activo</label>
-        <label class="wide">Descripcion<input ng-model="vm.productoForm.descripcion"></label>
+        <label class="wide">Descripcion
+          <input ng-model="vm.productoForm.descripcion" maxlength="400" placeholder="Ingredientes, presentacion o nota">
+        </label>
       </div>
-      <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
-      <div class="modal-actions"><button class="btn ghost" type="button" ng-click="vm.productoModal=false">Cancelar</button><button class="btn primary">Guardar</button></div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.productoModal=false">Cancelar</button>
+        <button class="btn primary" type="submit" ng-disabled="vm.saving">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.recetaModal">
+    <form class="modal modal-wide" ng-submit="vm.saveRecetaItem()" novalidate>
+      <div class="modal-head">
+        <div>
+          <h3>Receta / consumo</h3>
+          <p>{{vm.recetaProducto.nombre}}</p>
+        </div>
+        <button type="button" class="icon-btn" ng-click="vm.recetaModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="inline-form recipe-form">
+        <label>Insumo
+          <select ng-model="vm.recetaForm.insumoProductoId" ng-options="p.id as (p.nombre + ' - ' + p.categoria) for p in vm.insumosInventario()" required></select>
+        </label>
+        <label>Cantidad
+          <input type="number" step="0.000001" min="0.000001" ng-model="vm.recetaForm.cantidad" required>
+        </label>
+        <label>Unidad
+          <select ng-model="vm.recetaForm.unidadMedidaId" ng-options="u.id as u.nombre for u in vm.unidades"></select>
+        </label>
+        <label class="check"><input type="checkbox" ng-model="vm.recetaForm.estado"> Activo</label>
+        <button class="btn primary" type="submit"><i class="fa-solid fa-plus"></i><span>Agregar</span></button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Insumo</th><th>Cantidad por venta</th><th>Unidad</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <tr ng-repeat="item in vm.recetaItems" ng-class="{muted: !item.estado}">
+              <td>{{item.insumo}}</td>
+              <td>{{item.cantidad | number:6}}</td>
+              <td>{{item.unidadMedida || '-'}}</td>
+              <td><span class="status" ng-class="{off: !item.estado}">{{item.estado ? 'Activo' : 'Inactivo'}}</span></td>
+              <td class="actions"><button class="icon-btn" type="button" ng-click="vm.deleteRecetaItem(item)"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+            <tr ng-if="!vm.recetaItems.length"><td colspan="5">Sin receta. Si el producto controla inventario, se descontara por factor.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.importModal">
+    <form class="modal modal-wide" ng-submit="vm.importProductos()" novalidate>
+      <div class="modal-head">
+        <div>
+          <h3>Importacion masiva</h3>
+          <p>Formato CSV: categoria,nombre,precio,costo,controlaInventario,descripcion</p>
+        </div>
+        <button type="button" class="icon-btn" ng-click="vm.importModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <label>Contenido
+        <textarea class="text-area" ng-model="vm.importText" rows="12"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.importModal=false">Cancelar</button>
+        <button class="btn primary" type="submit" ng-disabled="vm.saving"><i class="fa-solid fa-upload"></i><span>Importar productos</span></button>
+      </div>
     </form>
   </div>
 </section>

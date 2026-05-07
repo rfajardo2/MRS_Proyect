@@ -238,7 +238,14 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
         cuenta.FechaModificacion = DateTime.UtcNow;
         if (request.Aprobar)
         {
-            await inventarioService.AplicarSalidaVentaAsync(cuenta, User.GetUsuarioId(), cancellationToken);
+            try
+            {
+                await inventarioService.AplicarSalidaVentaAsync(cuenta, User.GetUsuarioId(), cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();

@@ -4,85 +4,268 @@
     <button class="btn ghost" type="button" ng-click="vm.load()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
   </div>
 
-  <div class="alert error" ng-if="vm.error">{{vm.error}}</div>
-  <span class="success-text" ng-if="vm.message">{{vm.message}}</span>
+  <div class="metric-grid product-metrics">
+    <div class="metric">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Productos controlados</span>
+      <strong>{{vm.stats.total}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>Bajo minimo</span>
+      <strong>{{vm.stats.bajoMinimo}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-arrow-right-arrow-left"></i>
+      <span>Movimientos</span>
+      <strong>{{vm.movimientos.length}}</strong>
+    </div>
+    <div class="metric">
+      <i class="fa-solid fa-ban"></i>
+      <span>Inactivos</span>
+      <strong>{{vm.stats.inactivos}}</strong>
+    </div>
+  </div>
 
-  <div class="inventory-grid">
-    <form class="panel inventory-form" ng-submit="vm.registrar()">
-      <h3>Registrar movimiento</h3>
+  <div class="tab-strip">
+    <button type="button" ng-class="{active: vm.tab === 'stock'}" ng-click="vm.tab='stock'"><i class="fa-solid fa-boxes-stacked"></i> Stock</button>
+    <button type="button" ng-class="{active: vm.tab === 'compras'}" ng-click="vm.tab='compras'"><i class="fa-solid fa-truck-ramp-box"></i> Compras</button>
+    <button type="button" ng-class="{active: vm.tab === 'lotes'}" ng-click="vm.tab='lotes'"><i class="fa-solid fa-hourglass-half"></i> Lotes</button>
+    <button type="button" ng-class="{active: vm.tab === 'kardex'}" ng-click="vm.tab='kardex'"><i class="fa-solid fa-clock-rotate-left"></i> Kardex</button>
+    <button type="button" ng-class="{active: vm.tab === 'reportes'}" ng-click="vm.tab='reportes'"><i class="fa-solid fa-chart-column"></i> Reportes</button>
+  </div>
+
+  <div class="inventory-grid" ng-if="vm.tab === 'stock'">
+    <form name="movimientoForm" class="panel inventory-form" ng-submit="vm.registrar(movimientoForm)" novalidate>
+      <div class="panel-heading compact-heading">
+        <h3>Registrar movimiento</h3>
+        <span class="status" ng-class="{off: !vm.canMove}">{{vm.canMove ? 'Habilitado' : 'Sin permiso'}}</span>
+      </div>
       <label>Producto
-        <select ng-model="vm.form.productoId" ng-options="p.productoId as (p.producto + ' - ' + p.categoria) for p in vm.stock" required></select>
+        <select name="productoId" ng-model="vm.form.productoId" ng-options="p.productoId as (p.producto + ' - ' + p.categoria + ' | Stock: ' + p.cantidadActual) for p in vm.productosActivos" required></select>
       </label>
-      <label>Tipo
-        <select ng-model="vm.form.tipo" ng-options="t.value as t.label for t in vm.tipos" required></select>
-      </label>
-      <label>Cantidad
-        <input type="number" step="0.001" min="0.001" ng-model="vm.form.cantidad" required>
-      </label>
-      <label>Costo unitario
-        <input type="number" step="1" min="0" ng-model="vm.form.costoUnitario" placeholder="Opcional">
-      </label>
-      <label>Referencia
-        <input ng-model="vm.form.referencia" placeholder="Factura, proveedor o nota">
-      </label>
-      <label>Motivo
-        <input ng-model="vm.form.motivo" placeholder="Motivo del movimiento">
-      </label>
-      <button class="btn primary" type="submit" ng-disabled="!vm.canMove"><i class="fa-solid fa-right-left"></i><span>Registrar</span></button>
+      <div class="form-grid compact">
+        <label>Tipo
+          <select name="tipo" ng-model="vm.form.tipo" ng-options="t.value as t.label for t in vm.tipos" required></select>
+        </label>
+        <label>Cantidad
+          <input name="cantidad" type="number" step="0.001" min="0.001" ng-model="vm.form.cantidad" required>
+        </label>
+        <label>Costo unitario
+          <input name="costoUnitario" type="number" step="1" min="0" ng-model="vm.form.costoUnitario" placeholder="Opcional">
+        </label>
+        <label>Referencia
+          <input ng-model="vm.form.referencia" maxlength="80" placeholder="Factura, proveedor o nota">
+        </label>
+        <label class="wide">Motivo
+          <input ng-model="vm.form.motivo" maxlength="200" placeholder="{{vm.motivoPlaceholder()}}">
+          <small class="field-hint" ng-if="vm.requiereMotivo()">Obligatorio para ajustes, devoluciones, roturas, vencimientos, danos y consumo interno.</small>
+        </label>
+      </div>
+      <button class="btn primary" type="submit" ng-disabled="!vm.canMove || vm.savingMove || !vm.productosActivos.length">
+        <i class="fa-solid fa-right-left"></i><span>Registrar</span>
+      </button>
     </form>
 
-    <form class="panel inventory-form" ng-submit="vm.guardarMinimo()">
-      <h3>Stock minimo</h3>
+    <form name="minimoForm" class="panel inventory-form" ng-submit="vm.guardarMinimo(minimoForm)" novalidate>
+      <div class="panel-heading compact-heading">
+        <h3>Stock minimo</h3>
+        <span class="status" ng-class="{off: !vm.minimo.productoId}">{{vm.minimo.productoId ? 'Seleccionado' : 'Pendiente'}}</span>
+      </div>
       <p ng-if="!vm.minimo.productoId">Selecciona un producto de la tabla para definir su alerta.</p>
       <label>Producto
-        <input ng-model="vm.minimo.producto" readonly>
+        <input ng-model="vm.minimo.producto" readonly placeholder="Sin producto seleccionado">
       </label>
       <label>Cantidad minima
-        <input type="number" step="0.001" min="0" ng-model="vm.minimo.cantidadMinima" required>
+        <input name="cantidadMinima" type="number" step="0.001" min="0" ng-model="vm.minimo.cantidadMinima" required>
       </label>
-      <button class="btn ghost" type="submit" ng-disabled="!vm.canEdit || !vm.minimo.productoId"><i class="fa-solid fa-bell"></i><span>Guardar minimo</span></button>
+      <button class="btn ghost" type="submit" ng-disabled="!vm.canEdit || vm.savingMinimo || !vm.minimo.productoId">
+        <i class="fa-solid fa-bell"></i><span>Guardar minimo</span>
+      </button>
     </form>
   </div>
 
-  <div class="panel">
-    <h3>Stock actual</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Categoria</th><th>Producto</th><th>Actual</th><th>Minimo</th><th>Estado</th><th></th></tr></thead>
-        <tbody>
-          <tr ng-repeat="item in vm.stock" ng-class="{muted: !item.estado}">
-            <td>{{item.categoria}}</td>
-            <td>{{item.producto}}</td>
-            <td>{{item.cantidadActual}}</td>
-            <td>{{item.cantidadMinima}}</td>
-            <td><span class="status" ng-class="{off: item.bajoMinimo}">{{item.bajoMinimo ? 'Bajo minimo' : 'OK'}}</span></td>
-            <td class="actions"><button class="icon-btn" type="button" ng-click="vm.editarMinimo(item)" title="Stock minimo"><i class="fa-solid fa-bell"></i></button></td>
+  <div class="toolbar product-toolbar" ng-if="vm.tab === 'stock' || vm.tab === 'kardex'">
+    <input ng-model="vm.filters.search" placeholder="Buscar producto o categoria">
+    <select ng-model="vm.filters.estadoStock">
+      <option value="">Todo el inventario</option>
+      <option value="bajo">Bajo minimo</option>
+      <option value="ok">OK</option>
+      <option value="inactivo">Productos inactivos</option>
+    </select>
+    <select ng-model="vm.filters.tipoMovimiento">
+      <option value="">Todos los movimientos</option>
+      <option ng-repeat="tipo in vm.tipos" value="{{tipo.value}}">{{tipo.label}}</option>
+      <option value="SalidaVenta">Salida por venta</option>
+    </select>
+    <button class="btn ghost" type="button" ng-click="vm.clearFilters()">
+      <i class="fa-solid fa-filter-circle-xmark"></i><span>Limpiar</span>
+    </button>
+  </div>
+
+  <div class="panel" ng-if="vm.tab === 'stock'">
+    <div class="panel-heading">
+      <h3>Stock actual</h3>
+      <span class="success-text">{{vm.filteredStock().length}} registros</span>
+    </div>
+    <div class="table-wrap product-table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th>Producto</th>
+            <th>Actual</th>
+            <th>Minimo</th>
+            <th>Estado</th>
+            <th></th>
           </tr>
-          <tr ng-if="!vm.stock.length"><td colspan="6">No hay productos con control de inventario.</td></tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="item in vm.filteredStock()" ng-class="{muted: !item.estado, 'low-stock-row': item.bajoMinimo}">
+            <td>{{item.categoria}}</td>
+            <td><strong>{{item.producto}}</strong></td>
+            <td>{{item.cantidadActual | number:3}}</td>
+            <td>{{item.cantidadMinima | number:3}}</td>
+            <td><span class="status" ng-class="{off: item.bajoMinimo || !item.estado}">{{!item.estado ? 'Inactivo' : (item.bajoMinimo ? 'Bajo minimo' : 'OK')}}</span></td>
+            <td class="actions">
+              <button class="icon-btn" type="button" ng-click="vm.editarMinimo(item)" ng-disabled="!vm.canEdit" title="Stock minimo">
+                <i class="fa-solid fa-bell"></i>
+              </button>
+            </td>
+          </tr>
+          <tr ng-if="!vm.filteredStock().length"><td colspan="6">No hay productos con control de inventario para los filtros seleccionados.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <div class="panel">
-    <h3>Movimientos recientes</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Antes</th><th>Despues</th><th>Referencia</th><th>Usuario</th></tr></thead>
+  <div class="panel" ng-if="vm.tab === 'kardex'">
+    <div class="panel-heading">
+      <h3>Movimientos recientes</h3>
+      <span class="success-text">{{vm.filteredMovimientos().length}} registros</span>
+    </div>
+    <div class="table-wrap product-table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Tipo</th>
+            <th>Cantidad</th>
+            <th>Antes</th>
+            <th>Despues</th>
+            <th>Costo</th>
+            <th>Referencia / motivo</th>
+            <th>Usuario</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr ng-repeat="mov in vm.movimientos">
+          <tr ng-repeat="mov in vm.filteredMovimientos()">
             <td>{{mov.fechaMovimiento | date:'dd/MM/yyyy HH:mm'}}</td>
             <td>{{mov.producto}}</td>
-            <td>{{mov.tipo}}</td>
-            <td>{{mov.cantidad}}</td>
-            <td>{{mov.saldoAnterior}}</td>
-            <td>{{mov.saldoNuevo}}</td>
-            <td>{{mov.referencia || mov.motivo}}</td>
+            <td><span class="status" ng-class="{off: vm.esSalida(mov.tipo)}">{{vm.tipoLabel(mov.tipo)}}</span></td>
+            <td>{{mov.cantidad | number:3}}</td>
+            <td>{{mov.saldoAnterior | number:3}}</td>
+            <td>{{mov.saldoNuevo | number:3}}</td>
+            <td>{{(mov.costoUnitario || 0) | currency:'$':0}}</td>
+            <td>{{mov.referencia || mov.motivo || '-'}}</td>
             <td>{{mov.usuario}}</td>
           </tr>
-          <tr ng-if="!vm.movimientos.length"><td colspan="8">Sin movimientos registrados</td></tr>
+          <tr ng-if="!vm.filteredMovimientos().length"><td colspan="9">Sin movimientos registrados para los filtros seleccionados.</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="inventory-grid" ng-if="vm.tab === 'compras'">
+    <form class="panel inventory-form" ng-submit="vm.guardarCompra()">
+      <div class="panel-heading compact-heading"><h3>Registrar compra</h3><span class="status">{{vm.totalCompra() | currency:'$':0}}</span></div>
+      <div class="form-grid compact">
+        <label>Proveedor
+          <select ng-model="vm.compra.proveedorId" ng-options="p.id as p.nombre for p in vm.proveedores"></select>
+        </label>
+        <label>Factura
+          <input ng-model="vm.compra.numeroFactura" maxlength="80" placeholder="Numero factura">
+        </label>
+        <label>Fecha
+          <input type="date" ng-model="vm.compra.fechaCompra">
+        </label>
+        <label>Observacion
+          <input ng-model="vm.compra.observacion" maxlength="250" placeholder="Opcional">
+        </label>
+      </div>
+      <div class="inline-form inventory-purchase-line">
+        <label>Producto
+          <select ng-model="vm.compraDetalle.productoId" ng-options="p.productoId as (p.producto + ' - ' + p.categoria) for p in vm.productosActivos"></select>
+        </label>
+        <label>Cantidad<input type="number" step="0.001" min="0.001" ng-model="vm.compraDetalle.cantidad"></label>
+        <label>Costo<input type="number" step="1" min="0" ng-model="vm.compraDetalle.costoUnitario"></label>
+        <label>Lote<input ng-model="vm.compraDetalle.codigoLote" maxlength="80" placeholder="Opcional"></label>
+        <label>Vence<input type="date" ng-model="vm.compraDetalle.fechaVencimiento"></label>
+        <button class="btn ghost" type="button" ng-click="vm.addCompraDetalle()"><i class="fa-solid fa-plus"></i><span>Agregar</span></button>
+      </div>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Producto</th><th>Cant.</th><th>Costo</th><th>Lote</th><th>Vence</th><th>Total</th><th></th></tr></thead>
+          <tbody>
+            <tr ng-repeat="item in vm.compra.detalles track by $index">
+              <td>{{item.producto}}</td><td>{{item.cantidad}}</td><td>{{item.costoUnitario | currency:'$':0}}</td><td>{{item.codigoLote || '-'}}</td><td>{{item.fechaVencimiento || '-'}}</td><td>{{item.cantidad * item.costoUnitario | currency:'$':0}}</td>
+              <td class="actions"><button type="button" class="icon-btn" ng-click="vm.removeCompraDetalle($index)"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+            <tr ng-if="!vm.compra.detalles.length"><td colspan="7">Agrega productos a la compra.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn primary" type="submit" ng-disabled="!vm.canCompras"><i class="fa-solid fa-check"></i><span>Registrar compra</span></button>
+    </form>
+
+    <form class="panel inventory-form" ng-submit="vm.crearProveedor()">
+      <h3>Proveedor rapido</h3>
+      <label>Nombre<input ng-model="vm.proveedorForm.nombre" maxlength="160" placeholder="Proveedor"></label>
+      <label>NIT<input ng-model="vm.proveedorForm.nit" maxlength="40" placeholder="Opcional"></label>
+      <label>Telefono<input ng-model="vm.proveedorForm.telefono" maxlength="40" placeholder="Opcional"></label>
+      <label>Correo<input ng-model="vm.proveedorForm.correo" maxlength="160" placeholder="Opcional"></label>
+      <button class="btn ghost" type="submit" ng-disabled="!vm.canCompras"><i class="fa-solid fa-building-circle-check"></i><span>Crear proveedor</span></button>
+    </form>
+  </div>
+
+  <div class="panel" ng-if="vm.tab === 'compras'">
+    <div class="panel-heading"><h3>Compras recientes</h3><span class="success-text">{{vm.compras.length}} registros</span></div>
+    <div class="table-wrap product-table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Factura</th><th>Total</th><th>Usuario</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="compra in vm.compras">
+            <td>{{compra.fechaCompra | date:'dd/MM/yyyy'}}</td><td>{{compra.proveedor || '-'}}</td><td>{{compra.numeroFactura || '-'}}</td><td>{{compra.total | currency:'$':0}}</td><td>{{compra.usuario}}</td>
+          </tr>
+          <tr ng-if="!vm.compras.length"><td colspan="5">Sin compras registradas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" ng-if="vm.tab === 'lotes'">
+    <div class="panel-heading"><h3>Lotes y vencimientos</h3><span class="success-text">{{vm.lotes.length}} lotes activos</span></div>
+    <div class="table-wrap product-table-wrap">
+      <table>
+        <thead><tr><th>Producto</th><th>Categoria</th><th>Lote</th><th>Vence</th><th>Cant.</th><th>Costo</th><th>Proveedor</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="lote in vm.lotes" ng-class="{'low-stock-row': lote.vencido || lote.proximoVencer}">
+            <td>{{lote.producto}}</td><td>{{lote.categoria}}</td><td>{{lote.codigoLote}}</td><td>{{lote.fechaVencimiento ? (lote.fechaVencimiento | date:'dd/MM/yyyy') : '-'}}</td><td>{{lote.cantidadActual | number:3}}</td><td>{{lote.costoUnitario | currency:'$':0}}</td><td>{{lote.proveedor || '-'}}</td>
+            <td><span class="status" ng-class="{off: lote.vencido || lote.proximoVencer}">{{lote.vencido ? 'Vencido' : (lote.proximoVencer ? 'Proximo' : 'OK')}}</span></td>
+          </tr>
+          <tr ng-if="!vm.lotes.length"><td colspan="8">Sin lotes activos.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" ng-if="vm.tab === 'reportes'">
+    <div class="metric-grid">
+      <div class="metric"><i class="fa-solid fa-sack-dollar"></i><span>Stock valorizado</span><strong>{{vm.reporte.stockValorizado | currency:'$':0}}</strong></div>
+      <div class="metric"><i class="fa-solid fa-cart-shopping"></i><span>Compras hoy</span><strong>{{vm.reporte.comprasPeriodo | currency:'$':0}}</strong></div>
+      <div class="metric"><i class="fa-solid fa-fire"></i><span>Productos vendidos</span><strong>{{vm.reporte.productosVendidos.length}}</strong></div>
+      <div class="metric"><i class="fa-solid fa-triangle-exclamation"></i><span>Perdidas registradas</span><strong>{{vm.reporte.perdidas.length}}</strong></div>
     </div>
   </div>
 </section>

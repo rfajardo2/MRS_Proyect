@@ -22,6 +22,9 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<ConfiguracionVenta> ConfiguracionesVenta => Set<ConfiguracionVenta>();
     public DbSet<ProductoCategoria> ProductoCategorias => Set<ProductoCategoria>();
     public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
+    public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<ProductoReceta> ProductoRecetas => Set<ProductoReceta>();
     public DbSet<DiaOperativo> DiasOperativos => Set<DiaOperativo>();
     public DbSet<Cuenta> Cuentas => Set<Cuenta>();
     public DbSet<CuentaItem> CuentaItems => Set<CuentaItem>();
@@ -29,6 +32,9 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<CajaTurno> CajaTurnos => Set<CajaTurno>();
     public DbSet<InventarioStock> InventarioStocks => Set<InventarioStock>();
     public DbSet<InventarioMovimiento> InventarioMovimientos => Set<InventarioMovimiento>();
+    public DbSet<InventarioLote> InventarioLotes => Set<InventarioLote>();
+    public DbSet<InventarioCompra> InventarioCompras => Set<InventarioCompra>();
+    public DbSet<InventarioCompraDetalle> InventarioCompraDetalles => Set<InventarioCompraDetalle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,6 +77,22 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<Producto>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
         modelBuilder.Entity<Producto>().Property(x => x.PrecioVenta).HasPrecision(18, 2);
         modelBuilder.Entity<Producto>().Property(x => x.CostoEstimado).HasPrecision(18, 2);
+        modelBuilder.Entity<Producto>().Property(x => x.FactorConversionInventario).HasPrecision(18, 6);
+        modelBuilder.Entity<Producto>().HasOne(x => x.UnidadVenta).WithMany().HasForeignKey(x => x.UnidadVentaId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Producto>().HasOne(x => x.UnidadInventario).WithMany().HasForeignKey(x => x.UnidadInventarioId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<UnidadMedida>().HasIndex(x => new { x.EmpresaId, x.Codigo }).IsUnique();
+        modelBuilder.Entity<UnidadMedida>().Property(x => x.Codigo).HasMaxLength(20);
+        modelBuilder.Entity<UnidadMedida>().Property(x => x.Nombre).HasMaxLength(80);
+        modelBuilder.Entity<Proveedor>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+        modelBuilder.Entity<Proveedor>().Property(x => x.Nombre).HasMaxLength(160);
+        modelBuilder.Entity<Proveedor>().Property(x => x.Nit).HasMaxLength(40);
+        modelBuilder.Entity<Proveedor>().Property(x => x.Telefono).HasMaxLength(40);
+        modelBuilder.Entity<Proveedor>().Property(x => x.Correo).HasMaxLength(160);
+        modelBuilder.Entity<ProductoReceta>().HasIndex(x => new { x.EmpresaId, x.ProductoVentaId, x.InsumoProductoId }).IsUnique();
+        modelBuilder.Entity<ProductoReceta>().Property(x => x.Cantidad).HasPrecision(18, 6);
+        modelBuilder.Entity<ProductoReceta>().HasOne(x => x.ProductoVenta).WithMany(x => x.RecetaVenta).HasForeignKey(x => x.ProductoVentaId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ProductoReceta>().HasOne(x => x.InsumoProducto).WithMany(x => x.RecetaInsumo).HasForeignKey(x => x.InsumoProductoId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ProductoReceta>().HasOne(x => x.UnidadMedida).WithMany().HasForeignKey(x => x.UnidadMedidaId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<DiaOperativo>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.Fecha }).IsUnique();
         modelBuilder.Entity<Cuenta>().HasIndex(x => new { x.EmpresaId, x.Numero }).IsUnique();
         modelBuilder.Entity<Cuenta>().Property(x => x.Subtotal).HasPrecision(18, 2);
@@ -89,6 +111,15 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<InventarioMovimiento>().Property(x => x.SaldoAnterior).HasPrecision(18, 3);
         modelBuilder.Entity<InventarioMovimiento>().Property(x => x.SaldoNuevo).HasPrecision(18, 3);
         modelBuilder.Entity<InventarioMovimiento>().Property(x => x.CostoUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<InventarioLote>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.ProductoId, x.CodigoLote }).IsUnique();
+        modelBuilder.Entity<InventarioLote>().Property(x => x.CodigoLote).HasMaxLength(80);
+        modelBuilder.Entity<InventarioLote>().Property(x => x.CantidadActual).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioLote>().Property(x => x.CostoUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<InventarioCompra>().Property(x => x.NumeroFactura).HasMaxLength(80);
+        modelBuilder.Entity<InventarioCompra>().Property(x => x.Total).HasPrecision(18, 2);
+        modelBuilder.Entity<InventarioCompraDetalle>().Property(x => x.Cantidad).HasPrecision(18, 3);
+        modelBuilder.Entity<InventarioCompraDetalle>().Property(x => x.CostoUnitario).HasPrecision(18, 2);
+        modelBuilder.Entity<InventarioCompraDetalle>().Property(x => x.Total).HasPrecision(18, 2);
         modelBuilder.Entity<CajaTurno>().HasIndex(x => new { x.EmpresaId, x.SucursalId, x.FechaOperativa }).IsUnique().HasFilter("[Estado] = 'Abierta'");
         modelBuilder.Entity<CajaTurno>().Property(x => x.SaldoInicial).HasPrecision(18, 2);
         modelBuilder.Entity<CajaTurno>().Property(x => x.TotalVentas).HasPrecision(18, 2);

@@ -236,7 +236,14 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         {
             cuenta.Estado = "Cerrada";
             cuenta.FechaCierre = DateTime.UtcNow;
-            await inventarioService.AplicarSalidaVentaAsync(cuenta, User.GetUsuarioId(), cancellationToken);
+            try
+            {
+                await inventarioService.AplicarSalidaVentaAsync(cuenta, User.GetUsuarioId(), cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

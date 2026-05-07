@@ -36,6 +36,9 @@ public sealed record UpsertConfiguracionVentaRequest(
 public sealed record ProductoCategoriaDto(int Id, string Nombre, string? Descripcion, int Orden, bool Estado);
 public sealed record UpsertProductoCategoriaRequest(string Nombre, string? Descripcion, int Orden, bool Estado);
 
+public sealed record UnidadMedidaDto(int Id, string Codigo, string Nombre, int Decimales, bool Estado);
+public sealed record ProveedorDto(int Id, string Nombre, string? Nit, string? Telefono, string? Correo, bool Estado);
+
 public sealed record ProductoDto(
     int Id,
     int CategoriaId,
@@ -44,6 +47,11 @@ public sealed record ProductoDto(
     string? Descripcion,
     decimal PrecioVenta,
     decimal? CostoEstimado,
+    int? UnidadVentaId,
+    string? UnidadVenta,
+    int? UnidadInventarioId,
+    string? UnidadInventario,
+    decimal FactorConversionInventario,
     bool ControlaInventario,
     bool Estado);
 
@@ -53,8 +61,23 @@ public sealed record UpsertProductoRequest(
     string? Descripcion,
     decimal PrecioVenta,
     decimal? CostoEstimado,
+    int? UnidadVentaId,
+    int? UnidadInventarioId,
+    decimal? FactorConversionInventario,
     bool ControlaInventario,
     bool Estado);
+
+public sealed record ProductoRecetaDto(
+    int Id,
+    int ProductoVentaId,
+    int InsumoProductoId,
+    string Insumo,
+    decimal Cantidad,
+    int? UnidadMedidaId,
+    string? UnidadMedida,
+    bool Estado);
+
+public sealed record UpsertProductoRecetaRequest(int InsumoProductoId, decimal Cantidad, int? UnidadMedidaId, bool Estado);
 
 public sealed record CuentaItemDto(
     int Id,
@@ -166,6 +189,7 @@ public sealed record InventarioStockDto(
     int ProductoId,
     string Producto,
     string Categoria,
+    string? UnidadInventario,
     decimal CantidadActual,
     decimal CantidadMinima,
     bool BajoMinimo,
@@ -182,6 +206,8 @@ public sealed record InventarioMovimientoDto(
     decimal? CostoUnitario,
     string? Referencia,
     string? Motivo,
+    string? Lote,
+    DateTime? FechaVencimiento,
     string Usuario,
     DateTime FechaMovimiento);
 
@@ -194,3 +220,28 @@ public sealed record RegistrarMovimientoInventarioRequest(
     string? Motivo);
 
 public sealed record ActualizarStockMinimoRequest(int ProductoId, decimal CantidadMinima);
+
+public sealed record InventarioLoteDto(
+    int Id,
+    int ProductoId,
+    string Producto,
+    string Categoria,
+    string CodigoLote,
+    DateTime? FechaVencimiento,
+    decimal CantidadActual,
+    decimal CostoUnitario,
+    string? Proveedor,
+    bool Vencido,
+    bool ProximoVencer);
+
+public sealed record InventarioCompraDetalleRequest(int ProductoId, decimal Cantidad, decimal CostoUnitario, string? CodigoLote, DateTime? FechaVencimiento);
+public sealed record CrearInventarioCompraRequest(int? ProveedorId, string? NumeroFactura, DateTime? FechaCompra, string? Observacion, IReadOnlyCollection<InventarioCompraDetalleRequest> Detalles);
+
+public sealed record InventarioCompraDetalleDto(int ProductoId, string Producto, decimal Cantidad, decimal CostoUnitario, string? CodigoLote, DateTime? FechaVencimiento, decimal Total);
+public sealed record InventarioCompraDto(int Id, string? Proveedor, string? NumeroFactura, DateTime FechaCompra, decimal Total, string Usuario, IReadOnlyCollection<InventarioCompraDetalleDto> Detalles);
+
+public sealed record InventarioReporteDto(
+    IReadOnlyCollection<BalanceDiaProductoDto> ProductosVendidos,
+    IReadOnlyCollection<BalanceDiaProductoDto> Perdidas,
+    decimal StockValorizado,
+    decimal ComprasPeriodo);

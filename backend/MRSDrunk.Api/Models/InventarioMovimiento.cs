@@ -9,6 +9,8 @@ public sealed class InventarioMovimiento
     public int UsuarioId { get; set; }
     public int? CuentaId { get; set; }
     public int? CuentaItemId { get; set; }
+    public int? LoteId { get; set; }
+    public int? CompraId { get; set; }
     public string Tipo { get; set; } = "Entrada";
     public decimal Cantidad { get; set; }
     public decimal SaldoAnterior { get; set; }
@@ -23,4 +25,6 @@ public sealed class InventarioMovimiento
     public Usuario? Usuario { get; set; }
     public Cuenta? Cuenta { get; set; }
     public CuentaItem? CuentaItem { get; set; }
+    public InventarioLote? Lote { get; set; }
+    public InventarioCompra? Compra { get; set; }
 }

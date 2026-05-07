@@ -16,6 +16,8 @@ public interface IInventarioService
         string? motivo,
         int? cuentaId,
         int? cuentaItemId,
+        int? loteId,
+        int? compraId,
         CancellationToken cancellationToken);
 
     Task AplicarSalidaVentaAsync(Cuenta cuenta, int usuarioId, CancellationToken cancellationToken);

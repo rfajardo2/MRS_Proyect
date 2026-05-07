@@ -99,7 +99,7 @@ label { display: grid; gap: 8px; color: var(--muted); font-weight: 700; font-siz
   color: var(--text);
   background: rgba(255,255,255,.06);
 }
-input, select {
+input, select, textarea {
   width: 100%;
   min-height: 38px;
   border: 1px solid var(--line);
@@ -126,6 +126,7 @@ input:focus, select:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba
 .btn { padding: 0 13px; }
 .btn.primary { background: linear-gradient(135deg, var(--red), var(--red-dark)); color: white; }
 .btn.ghost { background: #15151a; color: var(--text); border: 1px solid var(--line); }
+.btn.ghost.active { border-color: rgba(239,35,60,.7); background: rgba(239,35,60,.16); color: var(--text); }
 .btn.wide { width: 100%; margin-top: 16px; }
 .icon-btn { width: 34px; background: #222229; color: var(--text); border: 1px solid var(--line); }
 .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
@@ -238,6 +239,11 @@ input:focus, select:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba
   gap: 10px;
   padding: 0 12px;
   text-align: left;
+}
+textarea {
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.45;
 }
 .menu-module-items button {
   padding-left: 14px;
@@ -434,6 +440,7 @@ dd { margin: 0; }
   color: var(--muted);
 }
 .cell-help { display: block; color: var(--muted); font-size: 11px; margin-top: 5px; line-height: 1.35; }
+.field-hint { color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1.35; }
 .extra-permissions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 220px; }
 .extra-permissions label {
   display: inline-flex;
@@ -953,6 +960,49 @@ dd { margin: 0; }
   display: grid;
   gap: 12px;
 }
+.product-metrics .metric {
+  min-height: 92px;
+}
+.product-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 210px) minmax(170px, 240px) auto;
+  align-items: center;
+}
+.product-toolbar input,
+.product-toolbar select {
+  min-height: 36px;
+  height: 36px;
+}
+.product-toolbar .check {
+  min-height: 36px;
+  color: var(--text);
+}
+.product-table-wrap {
+  max-height: calc(100vh - 310px);
+}
+.product-table strong {
+  color: var(--text);
+}
+.product-table .muted strong {
+  color: var(--muted);
+}
+.low-stock-row {
+  background: rgba(239,35,60,.06);
+}
+.low-stock-row td {
+  border-bottom-color: rgba(239,35,60,.2);
+}
+.form-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.inventory-purchase-line {
+  grid-template-columns: minmax(190px, 1.3fr) minmax(105px, .6fr) minmax(110px, .7fr) minmax(130px, .8fr) minmax(130px, .8fr) auto;
+  margin: 0;
+}
+.recipe-form {
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, .7fr) minmax(140px, .8fr) minmax(120px, .6fr) auto;
+}
 .legal-novedad-form {
   display: grid;
   grid-template-columns: 1.2fr .7fr 1.2fr repeat(2, .9fr) repeat(4, .8fr) auto;
@@ -1155,12 +1205,13 @@ dd { margin: 0; }
   .mobile-only { display: inline-flex; }
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-grid { grid-template-columns: 1fr; }
-  .inline-form, .legal-novedad-form { grid-template-columns: 1fr 1fr; }
+  .inline-form, .legal-novedad-form, .inventory-purchase-line, .recipe-form { grid-template-columns: 1fr 1fr; }
   .legal-novedad-form .wide { grid-column: 1 / -1; }
   .form-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tree-detail { grid-template-columns: 1fr 1fr; }
   .cash-columns { grid-template-columns: 1fr; }
   .inventory-grid { grid-template-columns: 1fr; }
+  .product-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1280px) {
@@ -1177,7 +1228,9 @@ dd { margin: 0; }
   .admin-user-filters { grid-template-columns: 1fr; }
   .metric-grid, .form-grid { grid-template-columns: 1fr; }
   .form-grid.three { grid-template-columns: 1fr; }
-  .inline-form, .legal-novedad-form, .non-working-item, .account-item-form { grid-template-columns: 1fr; }
+  .form-grid.compact,
+  .product-toolbar { grid-template-columns: 1fr; }
+  .inline-form, .legal-novedad-form, .non-working-item, .account-item-form, .inventory-purchase-line, .recipe-form { grid-template-columns: 1fr; }
     .account-create-form > .btn,
     .account-payment-form > .btn,
     .account-total-bar > .btn { width: 100%; }
