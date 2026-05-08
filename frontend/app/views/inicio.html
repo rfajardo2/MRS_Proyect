@@ -1,23 +1,41 @@
 <main class="public-page">
-  <section class="public-hero">
-    <div class="public-hero-media">
-      <img src="app/assets/img/mrsdrunk_logo.jpg" alt="MRS Drunk">
-    </div>
+  <section class="public-home">
+    <header class="public-home-header">
+      <div class="public-home-brand">
+        <img src="app/assets/img/mrs-drunk-logo.svg" alt="MRS Drunk">
+        <div>
+          <strong>MRS Drunk</strong>
+          <span class="status">Abierto</span>
+        </div>
+      </div>
+      <button class="btn ghost public-admin-link" type="button" ng-click="vm.goLogin()">
+        <i class="fa-solid fa-lock"></i>
+        <span>Admin</span>
+      </button>
+    </header>
 
-    <div class="public-hero-content">
+    <div class="public-home-card">
+      <img class="public-home-logo" src="app/assets/img/mrsdrunk_logo.jpg" alt="MRS Drunk">
       <span class="eyebrow">MRS Drunk</span>
-      <h1>Menu y administracion del local</h1>
-      <p>Consulta la carta disponible o entra al sistema administrativo.</p>
-      <div class="public-actions">
-        <button class="btn primary" type="button" ng-click="vm.goMenu()">
+      <h1>La noche apenas comienza</h1>
+      <p>Consulta nuestra carta digital y comparte el menu con tu mesa.</p>
+
+      <div class="public-actions stacked">
+        <button class="btn primary public-main-cta" type="button" ng-click="vm.goMenu()">
           <i class="fa-solid fa-martini-glass-citrus"></i>
-          <span>Ver menu</span>
+          <span>Ver carta y promos</span>
         </button>
-        <button class="btn ghost" type="button" ng-click="vm.goLogin()">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span>Iniciar sesion</span>
+        <button class="btn ghost" type="button" ng-click="vm.share()">
+          <i class="fa-solid fa-share-nodes"></i>
+          <span>Compartir menu</span>
         </button>
       </div>
+
+      <footer class="public-home-footer">
+        <button type="button" ng-click="vm.goMenu()"><i class="fa-solid fa-wine-glass"></i> Carta</button>
+        <button type="button" ng-click="vm.share()"><i class="fa-solid fa-paper-plane"></i> Compartir</button>
+        <button type="button" ng-click="vm.goLogin()"><i class="fa-solid fa-user-lock"></i> Personal</button>
+      </footer>
     </div>
   </section>
 </main>
