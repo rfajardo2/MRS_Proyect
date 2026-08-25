@@ -1,0 +1,388 @@
+<section class="page" ng-controller="AdminPagosPayUController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Operacion</span>
+      <h2>Trazabilidad PayU</h2>
+    </div>
+    <div class="page-actions">
+      <button class="btn ghost" type="button" ng-if="vm.canViewReports" ng-click="vm.goToReports()">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Reportes ejecutivos</span>
+      </button>
+      <button class="btn ghost" type="button" ng-if="vm.canConciliate" ng-click="vm.selectVisibleDiscrepancies()">
+        <i class="fa-solid fa-list-check"></i>
+        <span>Seleccionar visibles</span>
+      </button>
+      <button class="btn ghost" type="button" ng-if="vm.canConciliate" ng-click="vm.clearSelection()" ng-disabled="!vm.hasSelection()">
+        <i class="fa-solid fa-broom"></i>
+        <span>Limpiar seleccion</span>
+      </button>
+      <button class="btn primary" type="button" ng-if="vm.canConciliate" ng-click="vm.bulkReconcileSelected()" ng-disabled="!vm.hasSelection() || vm.isActionBusy('reconcile-bulk')">
+        <i class="fa-solid fa-code-compare"></i>
+        <span>Conciliar seleccionados ({{vm.selectedCount()}})</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.exportCsv()">
+        <i class="fa-solid fa-file-arrow-down"></i>
+        <span>Exportar CSV</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.load()">
+        <i class="fa-solid fa-rotate"></i>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </div>
+
+  <form class="toolbar admin-user-filters payment-trace-filters" ng-submit="$event.preventDefault()">
+    <input type="date" ng-model="vm.filters.desde">
+    <input type="date" ng-model="vm.filters.hasta">
+    <select ng-model="vm.filters.usuarioId" ng-options="u.usuarioId as u.nombre for u in vm.userOptions">
+      <option value="">Todos los usuarios</option>
+    </select>
+    <select ng-model="vm.filters.estado">
+      <option value="">Todos los estados</option>
+      <option>PENDING</option>
+      <option>APPROVED</option>
+      <option>REJECTED</option>
+      <option>DECLINED</option>
+      <option>ERROR</option>
+      <option>EXPIRED</option>
+      <option>CANCELLED</option>
+    </select>
+    <select ng-model="vm.filters.metodo">
+      <option value="">Todos los metodos</option>
+      <option>QR_BREB</option>
+      <option>CARD</option>
+      <option>PSE</option>
+      <option>PAYMENT_LINK</option>
+    </select>
+    <label class="check compact payment-trace-check">
+      <input type="checkbox" ng-model="vm.filters.soloDiscrepancias">
+      Solo discrepancias
+    </label>
+    <input ng-model="vm.filters.texto" placeholder="Referencia, cuenta, usuario, transaccion">
+    <div class="page-actions">
+      <button class="btn primary" type="button" ng-click="vm.runFilters()">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Filtrar</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.resetFilters()">
+        <i class="fa-solid fa-eraser"></i>
+        <span>Limpiar</span>
+      </button>
+    </div>
+  </form>
+
+  <div class="metric-grid" ng-if="vm.summary">
+    <article class="metric"><span>Intentos</span><strong>{{vm.summary.totalIntentos}}</strong></article>
+    <article class="metric"><span>Pendientes</span><strong>{{vm.summary.pending}}</strong></article>
+    <article class="metric"><span>Aprobados</span><strong>{{vm.summary.approved}}</strong></article>
+    <article class="metric"><span>Rechazados</span><strong>{{vm.summary.rejected}}</strong></article>
+    <article class="metric"><span>Expirados</span><strong>{{vm.summary.expired}}</strong></article>
+    <article class="metric"><span>Errores</span><strong>{{vm.summary.errors}}</strong></article>
+    <article class="metric"><span>Discrepancias</span><strong>{{vm.summary.discrepancies}}</strong></article>
+    <article class="metric"><span>Confirmaciones huerfanas</span><strong>{{vm.summary.orphanConfirmations}}</strong></article>
+    <article class="metric"><span>Valor esperado</span><strong>{{vm.summary.expected | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Valor confirmado</span><strong>{{vm.summary.paid | currency:'$':0}}</strong></article>
+  </div>
+
+  <div class="user-summary-grid payment-user-grid" ng-if="vm.userSummaries.length">
+    <button type="button"
+            class="user-summary-card payment-user-card"
+            ng-repeat="summary in vm.userSummaries"
+            ng-click="vm.selectUserSummary(summary)"
+            ng-class="{active: vm.filters.usuarioId === summary.usuarioId}">
+      <div class="user-summary-head">
+        <span class="avatar mini">{{summary.nombre.charAt(0)}}</span>
+        <div>
+          <strong>{{summary.nombre}}</strong>
+          <small>{{summary.intentos}} intentos</small>
+        </div>
+      </div>
+      <div class="user-summary-stats">
+        <span><b>{{summary.approved}}</b> aprobados</span>
+        <span><b>{{summary.pending}}</b> pendientes</span>
+        <span><b>{{summary.rejected}}</b> con fallo</span>
+        <span><b>{{summary.discrepancies}}</b> discrepancias</span>
+      </div>
+      <div class="user-summary-footer">
+        <span>Esperado: <b>{{summary.expected | currency:'$':0}}</b></span>
+        <span>Confirmado: <b>{{summary.paid | currency:'$':0}}</b></span>
+      </div>
+    </button>
+  </div>
+
+  <div class="panel" ng-if="vm.orphans.length">
+    <h3>Confirmaciones sin pago asociado</h3>
+    <div class="table-wrap compact-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Referencia</th>
+            <th>Cuenta</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Valor</th>
+            <th>Firma</th>
+            <th>Procesado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="item in vm.orphans">
+            <td>{{item.fechaRecepcion | date:'short'}}</td>
+            <td>{{item.referencia}}</td>
+            <td>{{item.cuentaNumero || '-'}}</td>
+            <td>{{item.usuario || '-'}}</td>
+            <td><span class="status-chip" ng-class="vm.statusClass(item.estadoRecibido)">{{item.estadoRecibido || 'SIN ESTADO'}}</span></td>
+            <td>{{item.valorRecibido | currency:'$':0}}</td>
+            <td><span class="tiny-badge" ng-class="item.firmaValida ? 'ok' : 'danger'">{{item.firmaValida ? 'Valida' : 'Invalida'}}</span></td>
+            <td>{{item.procesado ? 'Si' : 'No'}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Intentos y estado final</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="compact-col" ng-if="vm.canConciliate"></th>
+            <th>Referencia</th>
+            <th>Usuario</th>
+            <th>Mesa</th>
+            <th>Metodo</th>
+            <th>Estado</th>
+            <th>Esperado</th>
+            <th>Pagado</th>
+            <th>Confirmaciones</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat-start="payment in vm.filtered">
+            <td ng-if="vm.canConciliate" class="compact-col">
+              <label class="check compact" ng-if="vm.canReconcileDuplicates(payment)">
+                <input type="checkbox" ng-model="vm.selectedPayments[payment.id]">
+              </label>
+            </td>
+            <td>
+              <strong>{{payment.cuentaNumero}}</strong>
+              <small class="muted block">{{payment.referencia}}</small>
+            </td>
+            <td>{{payment.mesero}}</td>
+            <td>{{payment.mesa || '-'}}</td>
+            <td>{{payment.metodoPago}}</td>
+            <td><span class="status-chip" ng-class="vm.statusClass(payment.estado)">{{payment.estado}}</span></td>
+            <td>{{payment.valorEsperado | currency:'$':0}}</td>
+            <td>{{payment.valorPagado | currency:'$':0}}</td>
+            <td>{{payment.confirmaciones}}</td>
+            <td class="actions">
+              <button class="icon-btn"
+                      type="button"
+                      title="Consultar estado PayU"
+                      ng-if="vm.canRefreshStatus(payment)"
+                      ng-disabled="vm.isActionBusy('refresh-' + payment.id)"
+                      ng-click="vm.refreshStatus(payment)">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
+              <button class="icon-btn"
+                      type="button"
+                      title="Reprocesar aprobacion"
+                      ng-if="vm.canReprocessApproved(payment)"
+                      ng-disabled="vm.isActionBusy('reprocess-' + payment.id)"
+                      ng-click="vm.reprocessApproved(payment)">
+                <i class="fa-solid fa-wrench"></i>
+              </button>
+              <button class="icon-btn"
+                      type="button"
+                      title="Cancelar intento pendiente"
+                      ng-if="vm.canCancelPending(payment)"
+                      ng-disabled="vm.isActionBusy('cancel-' + payment.id)"
+                      ng-click="vm.cancelPending(payment)">
+                <i class="fa-solid fa-ban"></i>
+              </button>
+              <button class="icon-btn"
+                      type="button"
+                      title="Conciliar duplicados historicos"
+                      ng-if="vm.canReconcileDuplicates(payment)"
+                      ng-disabled="vm.isActionBusy('reconcile-' + payment.id)"
+                      ng-click="vm.reconcileDuplicates(payment)">
+                <i class="fa-solid fa-code-compare"></i>
+              </button>
+              <button class="icon-btn" type="button" title="Ver detalle" ng-click="vm.toggleDetail(payment)">
+                <i class="fa-solid" ng-class="vm.expanded[payment.id] ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              </button>
+            </td>
+          </tr>
+          <tr ng-repeat-end ng-if="vm.expanded[payment.id]" class="expanded-row">
+            <td colspan="{{vm.canConciliate ? 10 : 9}}">
+              <div class="payments-collapse payment-trace-collapse">
+                <div class="panel-split" ng-if="vm.loadingDetail[payment.id]">
+                  <span class="muted">Cargando detalle del intento...</span>
+                </div>
+                <div ng-if="vm.details[payment.id]">
+                  <div class="section-header">
+                    <div>
+                      <strong>Intento {{vm.details[payment.id].payment.referencia}}</strong>
+                      <small>Creado {{vm.details[payment.id].payment.fechaCreacion | date:'short'}} · Cuenta {{vm.details[payment.id].payment.cuentaNumero}}</small>
+                    </div>
+                    <div class="inline-actions">
+                      <button class="btn ghost"
+                              type="button"
+                              ng-if="vm.canRefreshStatus(vm.details[payment.id].payment)"
+                              ng-disabled="vm.isActionBusy('refresh-' + payment.id)"
+                              ng-click="vm.refreshStatus(vm.details[payment.id].payment)">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Consultar estado</span>
+                      </button>
+                      <button class="btn ghost"
+                              type="button"
+                              ng-if="vm.canReprocessApproved(vm.details[payment.id].payment)"
+                              ng-disabled="vm.isActionBusy('reprocess-' + payment.id)"
+                              ng-click="vm.reprocessApproved(vm.details[payment.id].payment)">
+                        <i class="fa-solid fa-wrench"></i>
+                        <span>Reprocesar aprobado</span>
+                      </button>
+                      <button class="btn ghost"
+                              type="button"
+                              ng-if="vm.canCancelPending(vm.details[payment.id].payment)"
+                              ng-disabled="vm.isActionBusy('cancel-' + payment.id)"
+                              ng-click="vm.cancelPending(vm.details[payment.id].payment)">
+                        <i class="fa-solid fa-ban"></i>
+                        <span>Cancelar intento</span>
+                      </button>
+                      <button class="btn ghost"
+                              type="button"
+                              ng-if="vm.canReconcileDuplicates(vm.details[payment.id].payment)"
+                              ng-disabled="vm.isActionBusy('reconcile-' + payment.id)"
+                              ng-click="vm.reconcileDuplicates(vm.details[payment.id].payment)">
+                        <i class="fa-solid fa-code-compare"></i>
+                        <span>Conciliar duplicados</span>
+                      </button>
+                      <button class="btn ghost"
+                              type="button"
+                              ng-if="vm.details[payment.id].payment.checkoutUrlAbsolute && vm.details[payment.id].payment.estado === 'PENDING'"
+                              ng-click="vm.openCheckout(vm.details[payment.id].payment)">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>Abrir checkout</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="discrepancy-badges" ng-if="vm.details[payment.id].payment.discrepancias.length">
+                    <span class="tiny-badge danger" ng-repeat="issue in vm.details[payment.id].payment.discrepancias track by $index">{{issue}}</span>
+                  </div>
+
+                  <div class="metric-grid compact payment-trace-metrics">
+                    <article class="metric">
+                      <span>Transaccion PayU</span>
+                      <strong>{{vm.details[payment.id].payment.transaccionPayU || '-'}}</strong>
+                    </article>
+                    <article class="metric">
+                      <span>Order ID</span>
+                      <strong>{{vm.details[payment.id].payment.orderIdPayU || '-'}}</strong>
+                    </article>
+                    <article class="metric">
+                      <span>Cuenta cerrada</span>
+                      <strong>{{vm.details[payment.id].payment.cuentaCerrada ? 'Si' : 'No'}}</strong>
+                    </article>
+                    <article class="metric">
+                      <span>Pago aplicado</span>
+                      <strong>{{vm.details[payment.id].payment.tienePagoAplicado ? 'Si' : 'No'}}</strong>
+                    </article>
+                  </div>
+
+                  <div class="table-wrap" ng-if="vm.details[payment.id].duplicateCuentaPagos && vm.details[payment.id].duplicateCuentaPagos.length > 1">
+                    <strong>CuentaPagos asociados a esta referencia</strong>
+                    <table>
+                      <thead><tr><th>Id</th><th>Estado</th><th>Metodo</th><th>Valor</th><th>Propina</th><th>Referencia</th><th>Fecha</th><th>Rol</th></tr></thead>
+                      <tbody>
+                        <tr ng-repeat="duplicate in vm.details[payment.id].duplicateCuentaPagos" ng-class="{'deleted-item-row': duplicate.estado === 'ANULADO_DUPLICADO_PAYU'}">
+                          <td>{{duplicate.id}}</td>
+                          <td><span class="tiny-badge" ng-class="duplicate.estado === 'ANULADO_DUPLICADO_PAYU' ? 'danger' : 'ok'">{{duplicate.estado}}</span></td>
+                          <td>{{duplicate.metodoPago}}</td>
+                          <td>{{duplicate.valor | currency:'$':0}}</td>
+                          <td>{{duplicate.valorPropina | currency:'$':0}}</td>
+                          <td>{{duplicate.referencia || '-'}}</td>
+                          <td>{{duplicate.fechaPago | date:'short'}}</td>
+                          <td>
+                            <span class="tiny-badge" ng-class="duplicate.esCanonico ? 'ok' : 'danger'">
+                              {{duplicate.esCanonico ? 'Canonico' : 'Duplicado'}}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="table-wrap" ng-if="vm.details[payment.id].cuenta">
+                    <strong>Productos de la cuenta</strong>
+                    <table>
+                      <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th></tr></thead>
+                      <tbody>
+                        <tr ng-repeat="item in vm.details[payment.id].cuenta.items" ng-class="{'deleted-item-row': item.eliminado}">
+                          <td>
+                            <strong>{{item.productoNombre}}</strong>
+                            <span class="deleted-badge" ng-if="item.eliminado">Eliminado</span>
+                            <small ng-if="item.eliminado && item.motivoEliminacion">{{item.motivoEliminacion}}</small>
+                          </td>
+                          <td>{{item.cantidad}}</td>
+                          <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.precioUnitario) | currency:'$':0}}</td>
+                          <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.total) | currency:'$':0}}</td>
+                        </tr>
+                        <tr ng-if="!vm.details[payment.id].cuenta.items.length"><td colspan="4" class="muted">Sin productos registrados</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="table-wrap" ng-if="vm.details[payment.id].cuenta">
+                    <strong>Pagos aplicados en la cuenta</strong>
+                    <table>
+                      <thead><tr><th>Metodo</th><th>Recibido</th><th>Propina</th><th>Aplica cuenta</th><th>Referencia</th><th>Fecha</th></tr></thead>
+                      <tbody>
+                        <tr ng-repeat="pagoCuenta in vm.details[payment.id].cuenta.pagos">
+                          <td>{{pagoCuenta.metodoPago}}</td>
+                          <td>{{pagoCuenta.valor | currency:'$':0}}</td>
+                          <td>{{pagoCuenta.valorPropina | currency:'$':0}}</td>
+                          <td>{{pagoCuenta.valorAplicadoCuenta | currency:'$':0}}</td>
+                          <td>{{pagoCuenta.referencia || '-'}}</td>
+                          <td>{{pagoCuenta.fechaPago | date:'short'}}</td>
+                        </tr>
+                        <tr ng-if="!vm.details[payment.id].cuenta.pagos.length"><td colspan="6" class="muted">Sin pagos aplicados</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="table-wrap">
+                    <strong>Confirmaciones PayU</strong>
+                    <table>
+                      <thead><tr><th>Fecha</th><th>Estado</th><th>Valor</th><th>Moneda</th><th>Firma</th><th>Procesado</th><th>Observacion</th></tr></thead>
+                      <tbody>
+                        <tr ng-repeat="confirmacion in vm.details[payment.id].confirmaciones">
+                          <td>{{confirmacion.fechaRecepcion | date:'short'}}</td>
+                          <td><span class="status-chip" ng-class="vm.statusClass(confirmacion.estadoRecibido)">{{confirmacion.estadoRecibido || 'SIN ESTADO'}}</span></td>
+                          <td>{{confirmacion.valorRecibido | currency:'$':0}}</td>
+                          <td>{{confirmacion.moneda || '-'}}</td>
+                          <td><span class="tiny-badge" ng-class="confirmacion.firmaValida ? 'ok' : 'danger'">{{confirmacion.firmaValida ? 'Valida' : 'Invalida'}}</span></td>
+                          <td>{{confirmacion.procesado ? 'Si' : 'No'}}</td>
+                          <td>{{confirmacion.observacion || '-'}}</td>
+                        </tr>
+                        <tr ng-if="!vm.details[payment.id].confirmaciones.length"><td colspan="7" class="muted">Sin confirmaciones recibidas</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr ng-if="!vm.filtered.length">
+            <td colspan="9" class="muted">No hay intentos de pago con esos filtros</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

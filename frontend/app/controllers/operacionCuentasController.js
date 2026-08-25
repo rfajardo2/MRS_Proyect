@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('OperacionCuentasController', function (operacionService, productosService, configuracionService, authService) {
+  angular.module('mrsDrunkApp').controller('OperacionCuentasController', function ($interval, $scope, $window, operacionService, paymentsService, productosService, configuracionService, authService) {
     var vm = this;
     vm.cuentas = [];
     vm.productos = [];
@@ -9,6 +9,7 @@
     vm.nueva = {};
     vm.item = {};
     vm.pago = { metodoPago: 'Efectivo', incluyePropina: false, valorPropina: 0 };
+    vm.payu = { session: null, status: null, busy: false };
     vm.configuracion = { porcentajePropinaDefecto: 10 };
     vm.error = null;
     vm.canCreate = authService.hasPermission('Operacion.Cuentas.Crear');
@@ -112,6 +113,45 @@
       }).catch(handleError);
     };
 
+    vm.iniciarPagoPayU = function (metodo) {
+      if (!vm.selected || !vm.canEdit || !vm.isEditable(vm.selected)) { return; }
+      if ((vm.selected.saldoPendiente || 0) <= 0) {
+        return showWarning('Sin saldo pendiente', 'La cuenta no tiene saldo pendiente para enviar a PayU.');
+      }
+
+      vm.payu.busy = true;
+      paymentsService.create({
+        cuentaId: vm.selected.id,
+        metodoPago: metodo,
+        valor: vm.selected.saldoPendiente,
+        moneda: 'COP'
+      }).then(function (session) {
+        vm.payu.session = session;
+        vm.payu.status = session;
+        vm.payu.busy = false;
+        if (session.checkoutUrlAbsolute) {
+          $window.open(session.checkoutUrlAbsolute, '_blank');
+        }
+        showSuccess('Flujo PayU generado');
+        startPolling(session.paymentId);
+      }).catch(function (err) {
+        vm.payu.busy = false;
+        handleError(err);
+      });
+    };
+
+    vm.reabrirCheckout = function () {
+      var url = vm.payu.status && vm.payu.status.checkoutUrlAbsolute;
+      if (url) {
+        $window.open(url, '_blank');
+      }
+    };
+
+    vm.consultarEstadoPago = function () {
+      if (!vm.payu.session) { return; }
+      refreshPaymentStatus(vm.payu.session.paymentId, false);
+    };
+
     vm.eliminarPago = function (pago) {
       if (!vm.selected || !vm.canEdit) { return; }
       Swal.fire({
@@ -194,6 +234,10 @@
       });
     };
 
+    $scope.$on('$destroy', function () {
+      stopPolling();
+    });
+
     function handleError(err) {
       var message = err.status === 403
         ? 'Tu rol no tiene permiso para esta accion. Revisa permisos del rol.'
@@ -215,6 +259,44 @@
 
     function getSaldoCuenta() {
       return vm.selected ? (vm.selected.saldoPendiente || vm.selected.total || 0) : 0;
+    }
+
+    function refreshPaymentStatus(paymentId, silent) {
+      paymentsService.status(paymentId).then(function (status) {
+        vm.payu.status = status;
+        if (status.estado !== 'PENDING') {
+          stopPolling();
+          vm.load();
+          if (!silent) {
+            if (status.estado === 'APPROVED') {
+              showSuccess('Pago aprobado por PayU');
+            } else {
+              showWarning('Actualizacion PayU', status.message || 'El pago cambio de estado.');
+            }
+          }
+        }
+      }).catch(function (err) {
+        if (!silent) {
+          handleError(err);
+        }
+      });
+    }
+
+    var pollPromise = null;
+
+    function startPolling(paymentId) {
+      stopPolling();
+      refreshPaymentStatus(paymentId, true);
+      pollPromise = $interval(function () {
+        refreshPaymentStatus(paymentId, true);
+      }, 5000);
+    }
+
+    function stopPolling() {
+      if (pollPromise) {
+        $interval.cancel(pollPromise);
+        pollPromise = null;
+      }
     }
 
     vm.load();

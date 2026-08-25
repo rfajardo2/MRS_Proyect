@@ -9,6 +9,7 @@ using MRSDrunk.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<PayUSettings>(builder.Configuration.GetSection("PayU"));
 builder.Services.AddDbContext<MrsDrunkDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -16,6 +17,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
+builder.Services.AddHttpClient<IPaymentService, PaymentService>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>

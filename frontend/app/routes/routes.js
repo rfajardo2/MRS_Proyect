@@ -16,6 +16,12 @@
         controllerAs: 'vm',
         public: true
       })
+      .when('/payment/result', {
+        templateUrl: 'app/views/payment-result.html',
+        controller: 'PaymentResultController',
+        controllerAs: 'vm',
+        public: true
+      })
       .when('/login', {
         templateUrl: 'app/views/login.html',
         controller: 'LoginController',
@@ -85,6 +91,12 @@
       })
       .when('/operacion/caja', {
         templateUrl: 'app/views/caja.html'
+      })
+      .when('/operacion/pagos-payu', {
+        templateUrl: 'app/views/admin-pagos-payu.html'
+      })
+      .when('/operacion/pagos-payu-reportes', {
+        templateUrl: 'app/views/admin-pagos-payu-reportes.html'
       })
       .when('/admin-cuentas', {
         templateUrl: 'app/views/admin-cuentas.html'

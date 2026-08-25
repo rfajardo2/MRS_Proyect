@@ -1,0 +1,30 @@
+<section class="public-page public-home payment-result-page" ng-controller="PaymentResultController as vm">
+  <div class="public-top-actions">
+    <button class="btn ghost" type="button" ng-click="vm.goInicio()"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="btn ghost" type="button" ng-click="vm.goLogin()"><i class="fa-solid fa-lock"></i><span>Admin</span></button>
+  </div>
+
+  <div class="public-home-card payment-result-card">
+    <img class="public-home-logo" src="app/assets/img/mrsdrunk_logo.jpg" alt="MRS Drunk">
+    <span class="eyebrow">Pago PayU</span>
+    <h1>{{(vm.status && vm.status.estado === 'APPROVED') ? 'Pago aprobado' : 'Verificando tu pago'}}</h1>
+    <p ng-if="vm.status">{{vm.status.message}}</p>
+    <p ng-if="vm.error">{{vm.error}}</p>
+
+    <div class="payment-result-metrics" ng-if="vm.status">
+      <article><span>Referencia</span><strong>{{vm.status.referencia}}</strong></article>
+      <article><span>Metodo</span><strong>{{vm.status.metodoPago}}</strong></article>
+      <article><span>Valor</span><strong>{{vm.status.valorEsperado | currency:'$':0}}</strong></article>
+      <article><span>Estado</span><strong>{{vm.status.estado}}</strong></article>
+    </div>
+
+    <div class="public-home-actions">
+      <button class="btn primary public-main-cta" type="button" ng-if="vm.status && vm.status.checkoutUrlAbsolute && vm.status.estado === 'PENDING'" ng-click="vm.reopen()">
+        <i class="fa-solid fa-up-right-from-square"></i><span>Continuar en PayU</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.goInicio()">
+        <i class="fa-solid fa-house"></i><span>Volver al inicio</span>
+      </button>
+    </div>
+  </div>
+</section>

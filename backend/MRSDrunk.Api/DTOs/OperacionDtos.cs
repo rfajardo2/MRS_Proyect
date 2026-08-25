@@ -98,7 +98,9 @@ public sealed record CuentaPagoDto(
     decimal ValorPropina,
     decimal ValorAplicadoCuenta,
     string? Referencia,
-    DateTime FechaPago);
+    DateTime FechaPago,
+    string Estado,
+    string Origen);
 
 public sealed record CuentaDto(
     int Id,

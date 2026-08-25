@@ -231,6 +231,15 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
             return BadRequest(new { message = "La cuenta no esta pendiente de aprobacion." });
         }
 
+        await db.Entry(cuenta).Collection(x => x.Pagos).LoadAsync(cancellationToken);
+        Recalcular(cuenta);
+        var totalConfirmado = cuenta.Pagos.Where(IsClosureEligiblePayment)
+            .Sum(x => x.Valor - (x.IncluyePropina ? x.ValorPropina : 0));
+        if (request.Aprobar && totalConfirmado + 0.01m < cuenta.Total)
+        {
+            return BadRequest(new { message = "La cuenta no tiene cobertura confirmada suficiente. Solo se pueden aprobar cierres con pagos PayU confirmados o efectivo registrado." });
+        }
+
         cuenta.Estado = request.Aprobar ? "Cerrada" : "Rechazada";
         cuenta.AdministradorCierreId = User.GetUsuarioId();
         cuenta.FechaCierre = request.Aprobar ? DateTime.UtcNow : null;
@@ -288,7 +297,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
                 g.Count(x => x.Estado == "Abierta" || x.Estado == "PendienteAprobacion"),
                 g.Count(x => x.Estado == "Cerrada"),
                 g.Where(x => x.Estado == "Cerrada").Sum(x => x.Total),
-                g.SelectMany(x => x.Pagos).Sum(x => x.Valor)))
+                g.SelectMany(x => OperacionController.EffectivePayments(x.Pagos)).Sum(x => x.Valor)))
             .OrderBy(x => x.Mesero)
             .ToList();
 
@@ -319,7 +328,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
             .OrderByDescending(x => x.FechaApertura)
             .ToListAsync(cancellationToken);
 
-        var pagos = cuentas.SelectMany(x => x.Pagos).ToList();
+        var pagos = cuentas.SelectMany(x => OperacionController.EffectivePayments(x.Pagos)).ToList();
         var pagosPorMetodo = pagos
             .GroupBy(x => string.IsNullOrWhiteSpace(x.MetodoPago) ? "Sin metodo" : x.MetodoPago)
             .Select(g => new CajaMetodoPagoDto(g.Key, g.Sum(x => x.Valor), g.Count()))
@@ -353,11 +362,33 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
     private async Task<Cuenta?> GetCuentaEditable(int cuentaId, CancellationToken cancellationToken) =>
         await db.Cuentas
             .Include(x => x.Items)
+            .Include(x => x.Pagos)
             .FirstOrDefaultAsync(x =>
                 x.Id == cuentaId &&
                 x.EmpresaId == User.GetEmpresaId() &&
                 (x.Estado == "Abierta" || x.Estado == "Rechazada"),
                 cancellationToken);
+
+    private static void Recalcular(Cuenta cuenta)
+    {
+        cuenta.Subtotal = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Cantidad * x.PrecioUnitario);
+        cuenta.Descuento = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Descuento);
+        cuenta.Total = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Total);
+        cuenta.FechaModificacion = DateTime.UtcNow;
+    }
+
+    private static bool IsClosureEligiblePayment(CuentaPago pago) =>
+        (
+            string.Equals(pago.MetodoPago, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase)
+        ) ||
+        (
+            string.Equals(pago.Origen, "PAYU", StringComparison.OrdinalIgnoreCase) &&
+            (
+                string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pago.Estado, "APPROVED", StringComparison.OrdinalIgnoreCase)
+            )
+        );
 
     private async Task<ConfiguracionVenta> GetConfiguracion(CancellationToken cancellationToken)
     {
@@ -372,14 +403,6 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
         db.ConfiguracionesVenta.Add(config);
         await db.SaveChangesAsync(cancellationToken);
         return config;
-    }
-
-    private static void Recalcular(Cuenta cuenta)
-    {
-        cuenta.Subtotal = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Cantidad * x.PrecioUnitario);
-        cuenta.Descuento = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Descuento);
-        cuenta.Total = cuenta.Items.Where(x => !x.Eliminado).Sum(x => x.Total);
-        cuenta.FechaModificacion = DateTime.UtcNow;
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

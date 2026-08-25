@@ -226,6 +226,13 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         }
 
         Recalcular(cuenta);
+        var totalConfirmado = cuenta.Pagos.Where(IsClosureEligiblePayment)
+            .Sum(x => x.Valor - (x.IncluyePropina ? x.ValorPropina : 0));
+        if (totalConfirmado + 0.01m < cuenta.Total)
+        {
+            return BadRequest(new { message = "La cuenta solo puede cerrarse con pagos confirmados por PayU o pagos en efectivo registrados." });
+        }
+
         var config = await GetConfiguracion(cancellationToken);
         if (config.RequiereAprobacionCierre)
         {
@@ -265,7 +272,7 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
             .ToListAsync(cancellationToken);
 
         var mesero = cuentas.FirstOrDefault()?.Mesero?.NombreCompleto ?? User.Identity?.Name ?? "Mesero";
-        var pagos = cuentas.SelectMany(x => x.Pagos).ToList();
+        var pagos = cuentas.SelectMany(x => EffectivePayments(x.Pagos)).ToList();
         var pagosPorMetodo = pagos
             .GroupBy(x => string.IsNullOrWhiteSpace(x.MetodoPago) ? "Sin metodo" : x.MetodoPago)
             .Select(g => new CajaMetodoPagoDto(g.Key, g.Sum(x => x.Valor), g.Count()))
@@ -305,6 +312,7 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
     private async Task<Cuenta?> GetCuentaPropiaEditable(int cuentaId, CancellationToken cancellationToken) =>
         await db.Cuentas
             .Include(x => x.Items)
+            .Include(x => x.Pagos)
             .FirstOrDefaultAsync(x =>
                 x.Id == cuentaId &&
                 x.EmpresaId == User.GetEmpresaId() &&
@@ -348,7 +356,7 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         var subtotal = activeItems.Sum(i => i.Cantidad * i.PrecioUnitario);
         var descuento = activeItems.Sum(i => i.Descuento);
         var total = activeItems.Sum(i => i.Total);
-        var pagos = x.Pagos.OrderBy(i => i.Id)
+        var pagos = EffectivePayments(x.Pagos).OrderBy(i => i.Id)
             .Select(i =>
             {
                 var valorPropina = i.IncluyePropina ? i.ValorPropina : 0;
@@ -360,7 +368,9 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
                     valorPropina,
                     Math.Max(0, i.Valor - valorPropina),
                     i.Referencia,
-                    i.FechaPago);
+                    i.FechaPago,
+                    i.Estado,
+                    i.Origen);
             })
             .ToList();
 
@@ -392,4 +402,25 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    internal static IEnumerable<CuentaPago> EffectivePayments(IEnumerable<CuentaPago> pagos) =>
+        pagos.Where(IsEffectivePayment);
+
+    internal static bool IsEffectivePayment(CuentaPago pago) =>
+        !string.Equals(pago.Estado, "ANULADO_DUPLICADO_PAYU", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsClosureEligiblePayment(CuentaPago pago) =>
+        (
+            IsEffectivePayment(pago) &&
+            string.Equals(pago.MetodoPago, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase)
+        ) ||
+        (
+            IsEffectivePayment(pago) &&
+            string.Equals(pago.Origen, "PAYU", StringComparison.OrdinalIgnoreCase) &&
+            (
+                string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pago.Estado, "APPROVED", StringComparison.OrdinalIgnoreCase)
+            )
+        );
 }
