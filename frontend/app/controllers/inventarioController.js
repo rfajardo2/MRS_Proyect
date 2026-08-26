@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('InventarioController', function (inventarioService, authService) {
+  angular.module('mrsDrunkApp').controller('InventarioController', function (inventarioService, authService, swalTheme) {
     var vm = this;
     vm.stock = [];
     vm.productosActivos = [];
@@ -281,16 +281,16 @@
 
     function handleError(err) {
       var message = err && err.data && err.data.message ? err.data.message : 'No fue posible completar la operacion.';
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
 
     function warn(message) {
-      Swal.fire({ title: 'Validacion', text: message, icon: 'warning', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Validacion', text: message, icon: 'warning', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
       return false;
     }
 
     function success(title) {
-      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: '#141417', color: '#f7f7f8' });
+      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: swalTheme.background, color: swalTheme.color });
     }
 
     vm.load();

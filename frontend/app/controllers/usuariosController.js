@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('UsuariosController', function ($location, authService, usuariosService, rolesService, empresasService) {
+  angular.module('mrsDrunkApp').controller('UsuariosController', function ($location, authService, usuariosService, rolesService, empresasService, swalTheme) {
     var vm = this;
     vm.search = '';
     vm.users = [];
@@ -78,12 +78,12 @@
         text: 'Desea ' + action + ' a ' + user.nombreCompleto + '?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef233c',
-        cancelButtonColor: '#2b2b33',
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        cancelButtonColor: swalTheme.cancelButtonColor,
         confirmButtonText: 'Si, ' + action,
         cancelButtonText: 'Cancelar',
-        background: '#141417',
-        color: '#f7f7f8'
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) {
           return;
@@ -96,8 +96,8 @@
             icon: 'success',
             timer: 1400,
             showConfirmButton: false,
-            background: '#141417',
-            color: '#f7f7f8'
+            background: swalTheme.background,
+            color: swalTheme.color
           });
           vm.load();
         });

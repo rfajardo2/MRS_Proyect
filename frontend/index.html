@@ -9,9 +9,13 @@
   <meta property="og:description" content="La noche apenas comienza. Mira la carta disponible de MRS Drunk.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="app/assets/img/mrsdrunk_logo.jpg">
-  <meta name="theme-color" content="#ef233c">
+  <meta name="theme-color" content="#EC3013">
+  <link rel="icon" type="image/svg+xml" href="app/assets/img/mrs-drunk-logo.svg">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app/styles/main.css">
 </head>
 <body ng-controller="LayoutController as layout">
@@ -97,6 +101,8 @@
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular-route.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="app/app.js"></script>
   <script src="app/routes/routes.js"></script>
   <script src="app/services/config.js"></script>
@@ -114,11 +120,17 @@
   <script src="app/services/productosService.js"></script>
   <script src="app/services/inventarioService.js"></script>
   <script src="app/services/operacionService.js"></script>
+  <script src="app/services/comandasService.js"></script>
+  <script src="app/services/realtimeService.js"></script>
   <script src="app/services/paymentsService.js"></script>
+  <script src="app/services/seguimientoPublicoService.js"></script>
+  <script src="app/services/seguimientoRealtimeService.js"></script>
+  <script src="app/services/swalTheme.js"></script>
   <script src="app/controllers/loginController.js"></script>
   <script src="app/controllers/inicioController.js"></script>
   <script src="app/controllers/menuPublicoController.js"></script>
   <script src="app/controllers/paymentResultController.js"></script>
+  <script src="app/controllers/seguimientoPublicoController.js"></script>
   <script src="app/controllers/layoutController.js"></script>
   <script src="app/controllers/homeController.js"></script>
   <script src="app/controllers/usuariosController.js"></script>
@@ -132,6 +144,7 @@
   <script src="app/controllers/productosController.js"></script>
   <script src="app/controllers/inventarioController.js"></script>
   <script src="app/controllers/operacionCuentasController.js"></script>
+  <script src="app/controllers/preparacionController.js"></script>
   <script src="app/controllers/balanceDiaController.js"></script>
   <script src="app/controllers/cajaController.js"></script>
   <script src="app/controllers/adminPagosPayuController.js"></script>
@@ -139,5 +152,6 @@
   <script src="app/controllers/adminCuentasController.js"></script>
   <script src="app/controllers/adminUsuariosCuentasController.js"></script>
   <script src="app/controllers/adminBalanceGeneralController.js"></script>
+  <script src="app/controllers/ayudaController.js"></script>
 </body>
 </html>

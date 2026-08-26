@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('CajaController', function (operacionService, authService) {
+  angular.module('mrsDrunkApp').controller('CajaController', function (operacionService, authService, swalTheme) {
     var vm = this;
     vm.turno = null;
     vm.turnos = [];
@@ -48,9 +48,9 @@
             return cuenta.numero + ' - ' + cuenta.mesero + ' (' + cuenta.estado + ')';
           }).join('<br>') + '</strong><br><br>Debes cerrar o anular esas cuentas antes de cerrar caja.',
           icon: 'warning',
-          background: '#141417',
-          color: '#f7f7f8',
-          confirmButtonColor: '#ef233c'
+          background: swalTheme.background,
+          color: swalTheme.color,
+          confirmButtonColor: swalTheme.confirmButtonColor
         });
       }
 
@@ -75,9 +75,9 @@
         title: 'Atencion',
         text: vm.error,
         icon: 'error',
-        background: '#141417',
-        color: '#f7f7f8',
-        confirmButtonColor: '#ef233c'
+        background: swalTheme.background,
+        color: swalTheme.color,
+        confirmButtonColor: swalTheme.confirmButtonColor
       });
     }
 

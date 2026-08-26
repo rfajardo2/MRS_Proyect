@@ -1,11 +1,12 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('ProductosController', function ($location, $q, productosService, authService) {
+  angular.module('mrsDrunkApp').controller('ProductosController', function ($location, $q, productosService, authService, swalTheme) {
     var vm = this;
     vm.categorias = [];
     vm.categoriasActivas = [];
     vm.unidades = [];
+    vm.areasPreparacion = [];
     vm.productos = [];
     vm.categoriaForm = {};
     vm.productoForm = {};
@@ -48,6 +49,10 @@
 
       productosService.unidades().then(function (data) {
         vm.unidades = data || [];
+      }).catch(handleError);
+
+      productosService.areasPreparacion().then(function (data) {
+        vm.areasPreparacion = data || [];
       }).catch(handleError);
     };
 
@@ -131,7 +136,9 @@
         costoEstimado: null,
         unidadVentaId: defaultUnidad('UND'),
         unidadInventarioId: defaultUnidad('UND'),
-        factorConversionInventario: 1
+        factorConversionInventario: 1,
+        areaPreparacionId: null,
+        requierePreparacion: true
       };
       vm.productoModal = true;
     };
@@ -218,7 +225,9 @@
         unidadInventarioId: form.unidadInventarioId || null,
         factorConversionInventario: Number(form.factorConversionInventario || 1),
         controlaInventario: !!form.controlaInventario,
-        estado: !!form.estado
+        estado: !!form.estado,
+        areaPreparacionId: form.areaPreparacionId || null,
+        requierePreparacion: form.requierePreparacion === undefined ? true : !!form.requierePreparacion
       };
     }
 
@@ -365,16 +374,16 @@
 
     function handleError(err) {
       var message = err && err.data && err.data.message ? err.data.message : 'No fue posible completar la operacion.';
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
 
     function warn(message) {
-      Swal.fire({ title: 'Validacion', text: message, icon: 'warning', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Validacion', text: message, icon: 'warning', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
       return false;
     }
 
     function success(title) {
-      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: '#141417', color: '#f7f7f8' });
+      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: swalTheme.background, color: swalTheme.color });
     }
 
     vm.load();

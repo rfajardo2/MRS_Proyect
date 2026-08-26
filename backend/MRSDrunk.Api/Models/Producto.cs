@@ -14,12 +14,15 @@ public sealed class Producto
     public decimal FactorConversionInventario { get; set; } = 1;
     public bool ControlaInventario { get; set; }
     public bool Estado { get; set; } = true;
+    public int? AreaPreparacionId { get; set; }
+    public bool RequierePreparacion { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
     public DateTime? FechaModificacion { get; set; }
     public Empresa? Empresa { get; set; }
     public ProductoCategoria? Categoria { get; set; }
     public UnidadMedida? UnidadVenta { get; set; }
     public UnidadMedida? UnidadInventario { get; set; }
+    public AreaPreparacion? AreaPreparacion { get; set; }
     public ICollection<CuentaItem> CuentaItems { get; set; } = new List<CuentaItem>();
     public ICollection<ProductoReceta> RecetaVenta { get; set; } = new List<ProductoReceta>();
     public ICollection<ProductoReceta> RecetaInsumo { get; set; } = new List<ProductoReceta>();

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('AdminPagosPayUController', function ($window, $location, paymentsService, authService) {
+  angular.module('mrsDrunkApp').controller('AdminPagosPayUController', function ($window, $location, paymentsService, authService, swalTheme) {
     var vm = this;
     vm.dashboard = null;
     vm.filtered = [];
@@ -120,9 +120,9 @@
           title: 'Sin seleccion',
           text: 'Selecciona al menos un intento con discrepancias conciliables.',
           icon: 'info',
-          background: '#141417',
-          color: '#f7f7f8',
-          confirmButtonColor: '#ef233c'
+          background: swalTheme.background,
+          color: swalTheme.color,
+          confirmButtonColor: swalTheme.confirmButtonColor
         });
         return;
       }
@@ -134,9 +134,9 @@
         showCancelButton: true,
         confirmButtonText: 'Conciliar ' + ids.length + ' intento(s)',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         runAction('reconcile-bulk', function () {
@@ -171,9 +171,9 @@
         showCancelButton: true,
         confirmButtonText: 'Reprocesar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         runAction('reprocess-' + payment.id, function () {
@@ -194,9 +194,9 @@
         showCancelButton: true,
         confirmButtonText: 'Cancelar intento',
         cancelButtonText: 'Volver',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         runAction('cancel-' + payment.id, function () {
@@ -217,9 +217,9 @@
         showCancelButton: true,
         confirmButtonText: 'Conciliar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         runAction('reconcile-' + payment.id, function () {
@@ -445,8 +445,8 @@
         icon: 'success',
         timer: 1300,
         showConfirmButton: false,
-        background: '#141417',
-        color: '#f7f7f8'
+        background: swalTheme.background,
+        color: swalTheme.color
       });
     }
 
@@ -462,9 +462,9 @@
         title: 'Conciliacion masiva completada',
         text: message,
         icon: result.fallidos > 0 ? 'warning' : 'success',
-        background: '#141417',
-        color: '#f7f7f8',
-        confirmButtonColor: '#ef233c'
+        background: swalTheme.background,
+        color: swalTheme.color,
+        confirmButtonColor: swalTheme.confirmButtonColor
       });
     }
 
@@ -479,7 +479,7 @@
       var message = err.status === 403
         ? 'Tu rol no tiene permiso para esta accion. Revisa Operacion.PagosPayU.Ver, Operacion.PagosPayU.Conciliar o Operacion.PagosPayU.Reportes.'
         : (err.data && (err.data.message || err.data.title) ? (err.data.message || err.data.title) : 'No fue posible completar la operacion.');
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
 
   });

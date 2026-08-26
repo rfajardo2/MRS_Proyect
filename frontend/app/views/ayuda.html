@@ -1,0 +1,20 @@
+<section class="page" ng-controller="AyudaController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Ayuda</span>
+      <h2>Guia rapida de la plataforma</h2>
+      <p>Lo esencial para operar cada modulo. Si algo no cuadra, empieza por aca antes de pedir soporte.</p>
+    </div>
+  </div>
+
+  <section class="panel" ng-repeat="seccion in vm.secciones">
+    <div class="panel-heading">
+      <div>
+        <h3><i class="fa-solid {{seccion.icono}}"></i> {{seccion.titulo}}</h3>
+      </div>
+    </div>
+    <ul class="help-tip-list">
+      <li ng-repeat="tip in seccion.tips">{{tip}}</li>
+    </ul>
+  </section>
+</section>

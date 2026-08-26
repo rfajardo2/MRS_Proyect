@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ namespace MRSDrunk.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService inventarioService) : ControllerBase
+public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService inventarioService, IComandaService comandaService) : ControllerBase
 {
     [HttpGet("cuentas/mias")]
     [RequirePermission("Operacion.Cuentas.Ver")]
@@ -52,6 +53,39 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         await db.SaveChangesAsync(cancellationToken);
         entity.Mesero = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(x => x.Id == entity.MeseroId, cancellationToken);
         return Ok(ToDto(entity));
+    }
+
+    [HttpPost("cuentas/{cuentaId:int}/generar-seguimiento")]
+    [RequirePermission("Operacion.Cuentas.Editar")]
+    public async Task<ActionResult<SeguimientoPublicoDto>> GenerarSeguimiento(int cuentaId, CancellationToken cancellationToken)
+    {
+        var cuenta = await db.Cuentas.FirstOrDefaultAsync(x =>
+            x.Id == cuentaId &&
+            x.EmpresaId == User.GetEmpresaId() &&
+            x.MeseroId == User.GetUsuarioId() &&
+            x.Estado != "Anulada",
+            cancellationToken);
+
+        if (cuenta is null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrEmpty(cuenta.TokenPublico))
+        {
+            try
+            {
+                cuenta.TokenPublico = GenerarTokenPublico();
+                cuenta.CodigoPublico = await GenerarCodigoPublicoUnicoAsync(cancellationToken);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        return Ok(new SeguimientoPublicoDto(cuenta.TokenPublico, cuenta.CodigoPublico!));
     }
 
     [HttpPost("cuentas/{cuentaId:int}/items")]
@@ -128,6 +162,7 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         item.FechaEliminacion = DateTime.UtcNow;
         Recalcular(cuenta);
         await db.SaveChangesAsync(cancellationToken);
+        await comandaService.CancelarPorCuentaItemAsync(item.Id, User.GetUsuarioId(), cancellationToken);
         return NoContent();
     }
 
@@ -264,7 +299,7 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
         var usuarioId = User.GetUsuarioId();
         var desde = DateTime.UtcNow.Date;
         var cuentas = await db.Cuentas.AsNoTracking()
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .Include(x => x.Mesero)
             .Where(x => x.EmpresaId == User.GetEmpresaId() && x.MeseroId == usuarioId && x.FechaApertura >= desde)
@@ -306,12 +341,12 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
 
     private IQueryable<Cuenta> BaseCuentasQuery() => db.Cuentas.AsNoTracking()
         .Include(x => x.Mesero)
-        .Include(x => x.Items)
+        .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
         .Include(x => x.Pagos);
 
     private async Task<Cuenta?> GetCuentaPropiaEditable(int cuentaId, CancellationToken cancellationToken) =>
         await db.Cuentas
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .FirstOrDefaultAsync(x =>
                 x.Id == cuentaId &&
@@ -397,11 +432,51 @@ public sealed class OperacionController(MrsDrunkDbContext db, IInventarioService
             totalAplicadoCuenta,
             Math.Max(0, total - totalAplicadoCuenta),
             Math.Max(0, totalAplicadoCuenta - total),
-            x.Items.OrderBy(i => i.Id).Select(i => new CuentaItemDto(i.Id, i.ProductoId, i.ProductoNombre, i.Cantidad, i.PrecioUnitario, i.Descuento, i.Total, i.Eliminado, i.MotivoEliminacion)).ToList(),
-            pagos);
+            x.Items.OrderBy(i => i.Id).Select(i => new CuentaItemDto(
+                i.Id, i.ProductoId, i.ProductoNombre, i.Cantidad, i.PrecioUnitario, i.Descuento, i.Total, i.Eliminado, i.MotivoEliminacion,
+                i.ComandaDetalle != null ? i.ComandaDetalle.Comanda!.Numero : null,
+                i.ComandaDetalle != null ? i.ComandaDetalle.Estado : null)).ToList(),
+            pagos,
+            x.TokenPublico,
+            x.CodigoPublico);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static readonly char[] CodigoPublicoAlfabeto = "23456789ABCDEFGHJKMNPQRSTUVWXYZ".ToCharArray();
+
+    private static string GenerarTokenPublico()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
+    private static string GenerarCodigoPublico()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(8);
+        var chars = new char[8];
+        for (var i = 0; i < chars.Length; i++)
+        {
+            chars[i] = CodigoPublicoAlfabeto[bytes[i] % CodigoPublicoAlfabeto.Length];
+        }
+
+        return $"{new string(chars, 0, 4)}-{new string(chars, 4, 4)}";
+    }
+
+    private async Task<string> GenerarCodigoPublicoUnicoAsync(CancellationToken cancellationToken)
+    {
+        for (var intento = 0; intento < 5; intento++)
+        {
+            var codigo = GenerarCodigoPublico();
+            var existe = await db.Cuentas.AsNoTracking().AnyAsync(x => x.CodigoPublico == codigo, cancellationToken);
+            if (!existe)
+            {
+                return codigo;
+            }
+        }
+
+        throw new InvalidOperationException("No fue posible generar un codigo de seguimiento unico. Intenta nuevamente.");
+    }
 
     internal static IEnumerable<CuentaPago> EffectivePayments(IEnumerable<CuentaPago> pagos) =>
         pagos.Where(IsEffectivePayment);

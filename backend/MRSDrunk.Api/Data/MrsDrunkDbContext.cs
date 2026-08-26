@@ -37,6 +37,11 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<InventarioLote> InventarioLotes => Set<InventarioLote>();
     public DbSet<InventarioCompra> InventarioCompras => Set<InventarioCompra>();
     public DbSet<InventarioCompraDetalle> InventarioCompraDetalles => Set<InventarioCompraDetalle>();
+    public DbSet<AreaPreparacion> AreasPreparacion => Set<AreaPreparacion>();
+    public DbSet<UsuarioAreaPreparacion> UsuarioAreasPreparacion => Set<UsuarioAreaPreparacion>();
+    public DbSet<Comanda> Comandas => Set<Comanda>();
+    public DbSet<ComandaDetalle> ComandaDetalles => Set<ComandaDetalle>();
+    public DbSet<ComandaDetalleEvento> ComandaDetalleEventos => Set<ComandaDetalleEvento>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -151,5 +156,19 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
         modelBuilder.Entity<CajaTurno>().Property(x => x.EfectivoEsperado).HasPrecision(18, 2);
         modelBuilder.Entity<CajaTurno>().Property(x => x.EfectivoReal).HasPrecision(18, 2);
         modelBuilder.Entity<CajaTurno>().Property(x => x.Diferencia).HasPrecision(18, 2);
+
+        modelBuilder.Entity<AreaPreparacion>().HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+        modelBuilder.Entity<UsuarioAreaPreparacion>().HasIndex(x => new { x.UsuarioId, x.AreaPreparacionId }).IsUnique();
+        modelBuilder.Entity<Producto>().HasOne(x => x.AreaPreparacion).WithMany(x => x.Productos).HasForeignKey(x => x.AreaPreparacionId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Cuenta>().HasIndex(x => x.TokenPublico).IsUnique().HasFilter("[TokenPublico] IS NOT NULL");
+        modelBuilder.Entity<Cuenta>().HasIndex(x => x.CodigoPublico).IsUnique().HasFilter("[CodigoPublico] IS NOT NULL");
+        modelBuilder.Entity<Comanda>().HasIndex(x => new { x.EmpresaId, x.Numero }).IsUnique();
+        modelBuilder.Entity<Comanda>().HasOne(x => x.Cuenta).WithMany(x => x.Comandas).HasForeignKey(x => x.CuentaId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ComandaDetalle>().Property(x => x.Cantidad).HasPrecision(18, 3);
+        modelBuilder.Entity<ComandaDetalle>().HasIndex(x => x.CuentaItemId).IsUnique();
+        modelBuilder.Entity<ComandaDetalle>().HasOne(x => x.CuentaItem).WithOne(x => x.ComandaDetalle).HasForeignKey<ComandaDetalle>(x => x.CuentaItemId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ComandaDetalle>().HasOne(x => x.Producto).WithMany().HasForeignKey(x => x.ProductoId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ComandaDetalle>().HasOne(x => x.AreaPreparacion).WithMany().HasForeignKey(x => x.AreaPreparacionId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ComandaDetalleEvento>().HasOne(x => x.ComandaDetalle).WithMany(x => x.Eventos).HasForeignKey(x => x.ComandaDetalleId).OnDelete(DeleteBehavior.Restrict);
     }
 }

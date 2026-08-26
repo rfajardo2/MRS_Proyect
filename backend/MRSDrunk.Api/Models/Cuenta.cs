@@ -11,6 +11,8 @@ public sealed class Cuenta
     public string? Mesa { get; set; }
     public string? Cliente { get; set; }
     public string Estado { get; set; } = "Abierta";
+    public string? TokenPublico { get; set; }
+    public string? CodigoPublico { get; set; }
     public bool Dividida { get; set; }
     public string? Observacion { get; set; }
     public DateTime FechaApertura { get; set; } = DateTime.UtcNow;
@@ -31,4 +33,5 @@ public sealed class Cuenta
     public DiaOperativo? DiaOperativo { get; set; }
     public ICollection<CuentaItem> Items { get; set; } = new List<CuentaItem>();
     public ICollection<CuentaPago> Pagos { get; set; } = new List<CuentaPago>();
+    public ICollection<Comanda> Comandas { get; set; } = new List<Comanda>();
 }

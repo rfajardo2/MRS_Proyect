@@ -1,0 +1,35 @@
+<section class="public-page public-home" ng-controller="SeguimientoPublicoController as vm">
+  <div class="public-home-card tracking-card">
+    <img class="public-home-logo" src="app/assets/img/mrsdrunk_logo.jpg" alt="MRS Drunk">
+    <span class="eyebrow" ng-if="!vm.loading && vm.cuenta">Mesa {{vm.cuenta.mesa || '-'}}</span>
+    <h1 ng-if="vm.loading">Cargando...</h1>
+    <h1 ng-if="!vm.loading && vm.notFound">Enlace no disponible</h1>
+    <p ng-if="!vm.loading && vm.notFound">No encontramos esta cuenta o el enlace ya expiro.</p>
+
+    <div ng-if="!vm.loading && vm.cuenta" class="tracking-body">
+      <h1>Tu consumo</h1>
+      <p class="muted tracking-closed-note" ng-if="vm.cuenta.soloLectura"><i class="fa-solid fa-circle-check"></i> Cuenta cerrada - este es el resumen final.</p>
+
+      <div class="tracking-list">
+        <div class="tracking-item" ng-repeat="item in vm.cuenta.items" ng-class="{cancelado: item.eliminado}">
+          <div class="tracking-item-row">
+            <span class="tracking-item-nombre">{{item.productoNombre}} <span class="tracking-item-cant">x{{item.cantidad}}</span></span>
+            <span class="tracking-item-total">{{item.total | currency:'$':0}}</span>
+          </div>
+          <div class="tracking-item-row tracking-item-meta">
+            <span class="status" ng-class="vm.estadoClase(item.estado)">{{vm.estadoLabel(item.estado)}}</span>
+            <span class="comanda-item-badge" ng-if="item.comandaNumero">{{item.comandaNumero}}</span>
+          </div>
+        </div>
+        <p class="muted" ng-if="!vm.cuenta.items.length">Sin productos registrados</p>
+      </div>
+
+      <div class="payment-result-metrics">
+        <article><span>Total actual</span><strong>{{vm.cuenta.totalActual | currency:'$':0}}</strong></article>
+        <article><span>Saldo pendiente</span><strong ng-class="{'saldo-pendiente': vm.cuenta.saldoPendiente > 0}">{{vm.cuenta.saldoPendiente | currency:'$':0}}</strong></article>
+      </div>
+
+      <button class="btn ghost tracking-refresh" type="button" ng-click="vm.actualizar()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
+    </div>
+  </div>
+</section>

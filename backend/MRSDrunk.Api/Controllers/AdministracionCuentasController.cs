@@ -13,7 +13,7 @@ namespace MRSDrunk.Api.Controllers;
 [ApiController]
 [Route("api/administracion-cuentas")]
 [Authorize]
-public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInventarioService inventarioService) : ControllerBase
+public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInventarioService inventarioService, IComandaService comandaService) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("AdministracionCuentas.Cuentas.Ver")]
@@ -21,7 +21,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
     {
         var cuentas = await db.Cuentas.AsNoTracking()
             .Include(x => x.Mesero)
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .Where(x => x.EmpresaId == User.GetEmpresaId())
             .OrderByDescending(x => x.FechaApertura)
@@ -38,7 +38,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
     {
         var cuentas = await db.Cuentas.AsNoTracking()
             .Include(x => x.Mesero)
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .Where(x => x.EmpresaId == User.GetEmpresaId() && x.Estado != "Anulada")
             .OrderByDescending(x => x.FechaApertura)
@@ -127,6 +127,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
         item.FechaEliminacion = DateTime.UtcNow;
         Recalcular(cuenta);
         await db.SaveChangesAsync(cancellationToken);
+        await comandaService.CancelarPorCuentaItemAsync(item.Id, User.GetUsuarioId(), cancellationToken);
         return NoContent();
     }
 
@@ -219,7 +220,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
     public async Task<IActionResult> ResolverCierre(int cuentaId, ResolverCierreCuentaRequest request, CancellationToken cancellationToken)
     {
         var cuenta = await db.Cuentas
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .FirstOrDefaultAsync(x => x.Id == cuentaId && x.EmpresaId == User.GetEmpresaId(), cancellationToken);
         if (cuenta is null)
         {
@@ -318,7 +319,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
 
         var cuentas = await db.Cuentas.AsNoTracking()
             .Include(x => x.Mesero)
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .Where(x =>
                 x.EmpresaId == empresaId &&
@@ -361,7 +362,7 @@ public sealed class AdministracionCuentasController(MrsDrunkDbContext db, IInven
 
     private async Task<Cuenta?> GetCuentaEditable(int cuentaId, CancellationToken cancellationToken) =>
         await db.Cuentas
-            .Include(x => x.Items)
+            .Include(x => x.Items).ThenInclude(x => x.ComandaDetalle).ThenInclude(x => x!.Comanda)
             .Include(x => x.Pagos)
             .FirstOrDefaultAsync(x =>
                 x.Id == cuentaId &&

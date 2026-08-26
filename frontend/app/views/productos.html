@@ -210,7 +210,14 @@
           <input type="number" step="0.000001" min="0.000001" ng-model="vm.productoForm.factorConversionInventario">
           <small class="field-hint">Cantidad de inventario que descuenta una unidad vendida si no tiene receta.</small>
         </label>
+        <label>Area de preparacion
+          <select ng-model="vm.productoForm.areaPreparacionId" ng-options="a.id as a.nombre for a in vm.areasPreparacion">
+            <option value="">Sin area</option>
+          </select>
+          <small class="field-hint">Determina a que pantalla de preparacion llega este producto en una comanda.</small>
+        </label>
         <label class="check"><input type="checkbox" ng-model="vm.productoForm.controlaInventario"> Controla inventario</label>
+        <label class="check"><input type="checkbox" ng-model="vm.productoForm.requierePreparacion"> Requiere preparacion</label>
         <label class="check"><input type="checkbox" ng-model="vm.productoForm.estado"> Activo</label>
         <label class="wide">Descripcion
           <input ng-model="vm.productoForm.descripcion" maxlength="400" placeholder="Ingredientes, presentacion o nota">

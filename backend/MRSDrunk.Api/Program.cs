@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MRSDrunk.Api.Configuration;
 using MRSDrunk.Api.Data;
+using MRSDrunk.Api.Hubs;
 using MRSDrunk.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +18,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
-builder.Services.AddHttpClient<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IComandaService, ComandaService>();
+builder.Services.AddHttpClient<IPaymentGatewayAdapter, PayUGatewayAdapter>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
 {
@@ -53,6 +57,16 @@ builder.Services
         };
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            },
             OnTokenValidated = async context =>
             {
                 var sessionId = context.Principal?.FindFirst("sessionId")?.Value;
@@ -94,4 +108,6 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ComandasHub>("/hubs/comandas");
+app.MapHub<SeguimientoPublicoHub>("/hubs/seguimiento");
 app.Run();

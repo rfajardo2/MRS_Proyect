@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('AdminPagosPayuReportesController', function ($window, $location, paymentsService, authService) {
+  angular.module('mrsDrunkApp').controller('AdminPagosPayuReportesController', function ($window, $location, paymentsService, authService, swalTheme) {
     var vm = this;
     vm.report = null;
     vm.loading = false;
@@ -82,7 +82,7 @@
       var message = err.status === 403
         ? 'Tu rol no tiene permiso para esta ventana. Revisa Operacion.PagosPayU.Reportes.'
         : (err.data && (err.data.message || err.data.title) ? (err.data.message || err.data.title) : 'No fue posible cargar el reporte ejecutivo.');
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
   });
 })();

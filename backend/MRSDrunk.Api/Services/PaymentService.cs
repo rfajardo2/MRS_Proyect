@@ -1,35 +1,26 @@
 using System.Globalization;
-using System.Net.Http.Json;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using MRSDrunk.Api.Configuration;
 using MRSDrunk.Api.Data;
 using MRSDrunk.Api.DTOs;
 using MRSDrunk.Api.Models;
 
 namespace MRSDrunk.Api.Services;
 
+// Orquesta el ciclo de vida de un pago (crear intento, consultar estado,
+// conciliar duplicados, aplicar un pago aprobado a la cuenta) sin conocer
+// los detalles de ningun proveedor especifico. Toda la mecanica propia de
+// una pasarela (firma, formato de checkout, mapeo de estados) vive detras
+// de IPaymentGatewayAdapter (ver PayUGatewayAdapter, el unico registrado hoy).
 public sealed class PaymentService(
     MrsDrunkDbContext db,
     IInventarioService inventarioService,
-    HttpClient httpClient,
-    IOptions<PayUSettings> payuOptions,
+    IPaymentGatewayAdapter gatewayAdapter,
     ILogger<PaymentService> logger) : IPaymentService
 {
-    private const string ProviderPayU = "PAYU";
-    private const string StatusPending = "PENDING";
-    private const string StatusApproved = "APPROVED";
-    private const string StatusRejected = "REJECTED";
-    private const string StatusDeclined = "DECLINED";
-    private const string StatusError = "ERROR";
-    private const string StatusExpired = "EXPIRED";
     private const string StatusCancelled = "CANCELLED";
     private const string StatusDuplicateVoided = "ANULADO_DUPLICADO_PAYU";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
-    private readonly PayUSettings _settings = payuOptions.Value;
 
     public async Task<PaymentSessionDto> CreateAsync(
         int empresaId,
@@ -38,8 +29,8 @@ public sealed class PaymentService(
         CreatePaymentRequest request,
         CancellationToken cancellationToken)
     {
-        var metodo = NormalizeMethod(request.MetodoPago);
-        var moneda = NormalizeCurrency(request.Moneda);
+        var metodo = gatewayAdapter.NormalizeMethod(request.MetodoPago);
+        var moneda = gatewayAdapter.NormalizeCurrency(request.Moneda);
         var cuenta = await db.Cuentas
             .Include(x => x.Items)
             .Include(x => x.Pagos)
@@ -60,7 +51,7 @@ public sealed class PaymentService(
         RecalculateAccount(cuenta);
 
         var approvedExternal = await db.PagoPasarelas.AsNoTracking()
-            .Where(x => x.CuentaId == cuenta.Id && x.Estado == StatusApproved)
+            .Where(x => x.CuentaId == cuenta.Id && x.Estado == PaymentGatewayStatuses.Approved)
             .SumAsync(x => x.ValorPagado, cancellationToken);
         var manualConfirmed = cuenta.Pagos
             .Where(IsManualConfirmedPayment)
@@ -82,7 +73,7 @@ public sealed class PaymentService(
         }
 
         var pendings = await db.PagoPasarelas
-            .Where(x => x.CuentaId == cuenta.Id && x.Estado == StatusPending)
+            .Where(x => x.CuentaId == cuenta.Id && x.Estado == PaymentGatewayStatuses.Pending)
             .ToListAsync(cancellationToken);
         foreach (var pending in pendings)
         {
@@ -97,13 +88,13 @@ public sealed class PaymentService(
             SucursalId = sucursalId,
             CuentaId = cuenta.Id,
             MesaReferencia = Clean(cuenta.Mesa),
-            Proveedor = ProviderPayU,
+            Proveedor = gatewayAdapter.Proveedor,
             MetodoPago = metodo,
             ReferenciaUnica = referencia,
             ValorEsperado = request.Valor,
             Moneda = moneda,
-            Estado = StatusPending,
-            FechaExpiracion = DateTime.UtcNow.AddMinutes(Math.Max(5, _settings.PendingExpirationMinutes)),
+            Estado = PaymentGatewayStatuses.Pending,
+            FechaExpiracion = DateTime.UtcNow.AddMinutes(Math.Max(5, gatewayAdapter.PendingExpirationMinutes)),
             UsuarioCreacionId = usuarioId,
             Observacion = "Pago preparado para generar checkout seguro.",
             CheckoutUrl = null,
@@ -114,13 +105,22 @@ public sealed class PaymentService(
         db.PagoPasarelas.Add(payment);
         await db.SaveChangesAsync(cancellationToken);
 
-        var descriptor = BuildCheckoutDescriptor(cuenta, payment.Id, referencia, metodo, request.Valor, moneda);
+        var checkoutRequest = new GatewayCheckoutRequest(
+            payment.Id,
+            cuenta.Id,
+            cuenta.Numero,
+            cuenta.Cliente,
+            referencia,
+            metodo,
+            request.Valor,
+            moneda);
+        var checkout = await gatewayAdapter.BuildCheckoutAsync(checkoutRequest, cancellationToken);
         payment.CheckoutUrl = $"/api/payments/{payment.Id}/checkout?empresaId={empresaId}";
-        payment.Observacion = descriptor.Message;
-        payment.ResponsePayload = JsonSerializer.Serialize(descriptor, JsonOptions);
+        payment.Observacion = checkout.Message;
+        payment.ResponsePayload = JsonSerializer.Serialize(new { checkout.Fields, checkout.Message }, JsonOptions);
         await db.SaveChangesAsync(cancellationToken);
 
-        return ToSessionDto(payment, descriptor.Message);
+        return ToSessionDto(payment, checkout.Message);
     }
 
     public async Task<PaymentStatusDto?> GetStatusAsync(
@@ -145,7 +145,7 @@ public sealed class PaymentService(
 
         if (ShouldRefreshStatus(payment))
         {
-            await TryRefreshFromPayUQueryAsync(payment.Id, cancellationToken);
+            await TryRefreshStatusAsync(payment.Id, cancellationToken);
             payment = await db.PagoPasarelas.AsNoTracking().FirstOrDefaultAsync(x => x.Id == paymentId && x.EmpresaId == empresaId, cancellationToken);
             if (payment is null)
             {
@@ -176,7 +176,7 @@ public sealed class PaymentService(
 
         if (ShouldRefreshStatus(payment))
         {
-            await TryRefreshFromPayUQueryAsync(payment.Id, cancellationToken);
+            await TryRefreshStatusAsync(payment.Id, cancellationToken);
             payment = await db.PagoPasarelas.AsNoTracking().FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
             if (payment is null)
             {
@@ -195,48 +195,24 @@ public sealed class PaymentService(
         var payment = await db.PagoPasarelas.AsNoTracking()
             .Include(x => x.Cuenta)
             .FirstOrDefaultAsync(x => x.Id == paymentId && x.EmpresaId == empresaId, cancellationToken);
-        if (payment is null || payment.Estado != StatusPending)
+        if (payment is null || payment.Estado != PaymentGatewayStatuses.Pending)
         {
             return null;
         }
 
-        var descriptor = BuildCheckoutDescriptor(
-            payment.Cuenta ?? throw new InvalidOperationException("La cuenta del pago no existe."),
+        var cuenta = payment.Cuenta ?? throw new InvalidOperationException("La cuenta del pago no existe.");
+        var checkoutRequest = new GatewayCheckoutRequest(
             payment.Id,
+            cuenta.Id,
+            cuenta.Numero,
+            cuenta.Cliente,
             payment.ReferenciaUnica,
             payment.MetodoPago,
             payment.ValorEsperado,
             payment.Moneda);
 
-        var fields = descriptor.Fields
-            .Select(x => $"<input type=\"hidden\" name=\"{HtmlEncode(x.Key)}\" value=\"{HtmlEncode(x.Value)}\" />");
-        return $$"""
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Redirigiendo a PayU</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111216; color: #f7f7f8; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
-    .card { max-width: 460px; padding: 32px; border:1px solid #2b2d36; border-radius: 18px; background:#17181d; box-shadow: 0 12px 40px rgba(0,0,0,.35);}
-    h1 { margin-top:0; font-size: 24px; }
-    p { color:#c9c9d1; line-height:1.5; }
-    button { background:#ef233c; border:none; color:white; font-weight:700; padding:14px 18px; border-radius:12px; cursor:pointer; width:100%; }
-  </style>
-</head>
-<body onload="document.forms[0].submit()">
-  <div class="card">
-    <h1>Conectando con PayU</h1>
-    <p>Estamos abriendo el flujo seguro del pago para la cuenta {{HtmlEncode(payment.Cuenta?.Numero ?? payment.CuentaId.ToString(CultureInfo.InvariantCulture))}}.</p>
-    <form method="post" action="{{HtmlEncode(_settings.CheckoutUrl)}}">
-      {{string.Join(Environment.NewLine, fields)}}
-      <button type="submit">Continuar con PayU</button>
-    </form>
-  </div>
-</body>
-</html>
-""";
+        var checkout = await gatewayAdapter.BuildCheckoutAsync(checkoutRequest, cancellationToken);
+        return checkout.Html;
     }
 
     public async Task<(bool Processed, string Message)> ProcessPayUConfirmationAsync(
@@ -244,22 +220,17 @@ public sealed class PaymentService(
         string payload,
         CancellationToken cancellationToken)
     {
-        var referencia = GetValue(data, "reference_sale", "referenceCode", "reference_pol");
-        var transactionId = GetValue(data, "transaction_id", "transactionId");
-        var estadoRecibido = GetValue(data, "state_pol", "transactionState", "lapTransactionState");
-        var moneda = NormalizeCurrency(GetValue(data, "currency", "currency_pol"));
-        var valorRecibido = ParseDecimal(GetValue(data, "value", "TX_VALUE"));
-        var signature = GetValue(data, "sign", "signature");
+        var parsed = await gatewayAdapter.ParseWebhookAsync(data, payload, cancellationToken);
 
         var log = new PagoConfirmacionPayU
         {
-            Referencia = referencia ?? string.Empty,
-            TransaccionPayU = transactionId,
-            EstadoRecibido = estadoRecibido,
-            ValorRecibido = valorRecibido,
-            Moneda = moneda,
+            Referencia = parsed.Referencia ?? string.Empty,
+            TransaccionPayU = parsed.TransactionId,
+            EstadoRecibido = parsed.EstadoRecibido,
+            ValorRecibido = parsed.ValorRecibido,
+            Moneda = parsed.Moneda,
             PayloadCompleto = payload,
-            FirmaRecibida = signature,
+            FirmaRecibida = parsed.Signature,
             FirmaValida = false,
             Procesado = false
         };
@@ -267,7 +238,7 @@ public sealed class PaymentService(
         db.PagoConfirmacionesPayU.Add(log);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(referencia))
+        if (string.IsNullOrWhiteSpace(parsed.Referencia))
         {
             log.Observacion = "No se recibio referencia en la confirmacion.";
             await db.SaveChangesAsync(cancellationToken);
@@ -279,7 +250,7 @@ public sealed class PaymentService(
             .ThenInclude(x => x!.Items)
             .Include(x => x.Cuenta)
             .ThenInclude(x => x!.Pagos)
-            .FirstOrDefaultAsync(x => x.ReferenciaUnica == referencia, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ReferenciaUnica == parsed.Referencia, cancellationToken);
         if (payment is null)
         {
             log.Observacion = "Referencia no encontrada en pagos locales.";
@@ -288,7 +259,7 @@ public sealed class PaymentService(
         }
 
         log.PagoPasarelaId = payment.Id;
-        log.FirmaValida = ValidateConfirmationSignature(data, payment);
+        log.FirmaValida = parsed.SignatureValid;
         if (!log.FirmaValida)
         {
             log.Observacion = "Firma de PayU invalida.";
@@ -297,27 +268,27 @@ public sealed class PaymentService(
             return (false, "Invalid signature");
         }
 
-        if (!string.Equals(payment.Moneda, moneda, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(payment.Moneda, parsed.Moneda, StringComparison.OrdinalIgnoreCase))
         {
             log.Observacion = "Moneda no coincide con la del pago esperado.";
             payment.MensajeError = "La confirmacion llego con una moneda distinta a la esperada.";
-            payment.Estado = StatusError;
+            payment.Estado = PaymentGatewayStatuses.Error;
             await db.SaveChangesAsync(cancellationToken);
             return (false, "Currency mismatch");
         }
 
-        if (Math.Round(payment.ValorEsperado, 2) != Math.Round(valorRecibido, 2))
+        if (Math.Round(payment.ValorEsperado, 2) != Math.Round(parsed.ValorRecibido, 2))
         {
             log.Observacion = "Valor recibido no coincide con el esperado.";
             payment.MensajeError = "La confirmacion llego con un valor distinto al esperado.";
-            payment.Estado = StatusError;
-            payment.ValorPagado = valorRecibido;
+            payment.Estado = PaymentGatewayStatuses.Error;
+            payment.ValorPagado = parsed.ValorRecibido;
             await db.SaveChangesAsync(cancellationToken);
             return (false, "Amount mismatch");
         }
 
-        var internalStatus = MapPayUStatus(estadoRecibido);
-        if (payment.Estado == StatusApproved && payment.TransaccionPayU == transactionId)
+        var internalStatus = parsed.InternalStatus;
+        if (payment.Estado == PaymentGatewayStatuses.Approved && payment.TransaccionPayU == parsed.TransactionId)
         {
             log.Procesado = true;
             log.Observacion = "Confirmacion duplicada ignorada.";
@@ -325,15 +296,15 @@ public sealed class PaymentService(
             return (true, "Duplicated confirmation");
         }
 
-        payment.TransaccionPayU = transactionId;
-        payment.OrderIdPayU = GetValue(data, "reference_pol", "transaction_order_id");
-        payment.ValorPagado = valorRecibido;
+        payment.TransaccionPayU = parsed.TransactionId;
+        payment.OrderIdPayU = parsed.OrderId;
+        payment.ValorPagado = parsed.ValorRecibido;
         payment.Estado = internalStatus;
-        payment.FechaConfirmacion = internalStatus == StatusApproved ? DateTime.UtcNow : payment.FechaConfirmacion;
+        payment.FechaConfirmacion = internalStatus == PaymentGatewayStatuses.Approved ? DateTime.UtcNow : payment.FechaConfirmacion;
         payment.ResponsePayload = payload;
-        payment.MensajeError = internalStatus == StatusApproved ? null : GetValue(data, "response_message_pol", "lapResponseCode");
+        payment.MensajeError = internalStatus == PaymentGatewayStatuses.Approved ? null : parsed.MensajeError;
 
-        if (internalStatus == StatusApproved)
+        if (internalStatus == PaymentGatewayStatuses.Approved)
         {
             await ApplyApprovedPaymentAsync(payment, cancellationToken);
             log.Observacion = "Pago aprobado y aplicado a la cuenta.";
@@ -364,23 +335,23 @@ public sealed class PaymentService(
             throw new InvalidOperationException("El intento de pago no existe.");
         }
 
-        if (payment.Estado == StatusPending &&
+        if (payment.Estado == PaymentGatewayStatuses.Pending &&
             payment.FechaExpiracion.HasValue &&
             payment.FechaExpiracion.Value <= DateTime.UtcNow)
         {
-            payment.Estado = StatusExpired;
+            payment.Estado = PaymentGatewayStatuses.Expired;
             payment.MensajeError = "El intento expiro antes de recibir confirmacion oficial.";
             payment.Observacion = AppendObservation(payment.Observacion, "Marcado como expirado desde panel administrativo.");
             await db.SaveChangesAsync(cancellationToken);
             return new AdminPaymentActionResultDto(payment.Id, payment.Estado, "Intento marcado como expirado.");
         }
 
-        if (!_settings.HasCredentials)
+        if (!gatewayAdapter.IsConfigured)
         {
-            return new AdminPaymentActionResultDto(payment.Id, payment.Estado, "No hay credenciales PayU configuradas para consultar el estado oficial.");
+            return new AdminPaymentActionResultDto(payment.Id, payment.Estado, "No hay credenciales configuradas para consultar el estado oficial.");
         }
 
-        await TryRefreshFromPayUQueryAsync(payment.Id, cancellationToken);
+        await TryRefreshStatusAsync(payment.Id, cancellationToken);
         payment = await db.PagoPasarelas.AsNoTracking().FirstAsync(x => x.Id == paymentId, cancellationToken);
         return new AdminPaymentActionResultDto(payment.Id, payment.Estado, BuildStatusMessage(payment));
     }
@@ -406,7 +377,7 @@ public sealed class PaymentService(
             throw new InvalidOperationException("El intento de pago no existe.");
         }
 
-        if (payment.Estado != StatusApproved)
+        if (payment.Estado != PaymentGatewayStatuses.Approved)
         {
             throw new InvalidOperationException("Solo se pueden reprocesar intentos aprobados.");
         }
@@ -432,7 +403,7 @@ public sealed class PaymentService(
             throw new InvalidOperationException("El intento de pago no existe.");
         }
 
-        if (payment.Estado != StatusPending)
+        if (payment.Estado != PaymentGatewayStatuses.Pending)
         {
             throw new InvalidOperationException("Solo se pueden cancelar intentos pendientes.");
         }
@@ -471,7 +442,7 @@ public sealed class PaymentService(
         var duplicates = await db.CuentaPagos
             .Where(x =>
                 x.CuentaId == payment.CuentaId &&
-                x.Origen == ProviderPayU &&
+                x.Origen == gatewayAdapter.Proveedor &&
                 x.Referencia == referencia &&
                 x.Estado != StatusDuplicateVoided)
             .OrderBy(x => x.Id)
@@ -524,7 +495,7 @@ public sealed class PaymentService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        if (payment.Estado == StatusApproved)
+        if (payment.Estado == PaymentGatewayStatuses.Approved)
         {
             await ReprocessApprovedAsync(empresaId, sucursalId, paymentId, cancellationToken);
         }
@@ -586,7 +557,7 @@ public sealed class PaymentService(
                 logger.LogWarning(ex, "No fue posible conciliar el pago PayU {PaymentId} en proceso masivo.", paymentId);
                 items.Add(new BulkPaymentReconcileItemDto(
                     paymentId,
-                    StatusError,
+                    PaymentGatewayStatuses.Error,
                     false,
                     ex.Message,
                     0,
@@ -625,7 +596,7 @@ public sealed class PaymentService(
             linkedPago = await db.CuentaPagos
                 .Where(x =>
                     x.CuentaId == payment.CuentaId &&
-                    string.Equals(x.Origen, ProviderPayU, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Origen, gatewayAdapter.Proveedor, StringComparison.OrdinalIgnoreCase) &&
                     (
                         x.PagoPasarelaId == payment.Id ||
                         (!x.PagoPasarelaId.HasValue && x.Referencia == payment.ReferenciaUnica)
@@ -648,8 +619,8 @@ public sealed class PaymentService(
             linkedPago = new CuentaPago
             {
                 CuentaId = payment.CuentaId,
-                MetodoPago = $"PAYU:{payment.MetodoPago}",
-                Origen = ProviderPayU,
+                MetodoPago = $"{gatewayAdapter.Proveedor}:{payment.MetodoPago}",
+                Origen = gatewayAdapter.Proveedor,
                 Estado = "APLICADO",
                 Valor = payment.ValorPagado <= 0 ? payment.ValorEsperado : payment.ValorPagado,
                 IncluyePropina = false,
@@ -702,186 +673,70 @@ public sealed class PaymentService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "El pago PayU de la cuenta {CuentaId} fue aprobado, pero no se pudo aplicar la salida de inventario.", cuenta.Id);
+            logger.LogError(ex, "El pago de la cuenta {CuentaId} fue aprobado, pero no se pudo aplicar la salida de inventario.", cuenta.Id);
             cuenta.Observacion = AppendObservation(
                 cuenta.Observacion,
-                "Pago aprobado por PayU. La cuenta se cerro, pero la salida de inventario quedo pendiente por falta de lotes o stock disponible.");
+                "Pago aprobado por la pasarela. La cuenta se cerro, pero la salida de inventario quedo pendiente por falta de lotes o stock disponible.");
         }
     }
 
-    private async Task TryRefreshFromPayUQueryAsync(int paymentId, CancellationToken cancellationToken)
+    private async Task TryRefreshStatusAsync(int paymentId, CancellationToken cancellationToken)
     {
         var payment = await db.PagoPasarelas.FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
-        if (payment is null || payment.Estado != StatusPending || !_settings.HasCredentials)
+        if (payment is null || payment.Estado != PaymentGatewayStatuses.Pending || !gatewayAdapter.IsConfigured)
         {
             return;
         }
 
-        try
+        payment.FechaUltimaConsulta = DateTime.UtcNow;
+
+        var result = await gatewayAdapter.QueryStatusAsync(payment, cancellationToken);
+        if (result is null)
         {
-            payment.FechaUltimaConsulta = DateTime.UtcNow;
-            var requestBody = new
-            {
-                language = "es",
-                command = "ORDER_DETAIL_BY_REFERENCE_CODE",
-                merchant = new
-                {
-                    apiLogin = _settings.ApiLogin,
-                    apiKey = _settings.ApiKey
-                },
-                details = new
-                {
-                    referenceCode = payment.ReferenciaUnica
-                },
-                test = _settings.IsSandbox
-            };
-
-            using var response = await httpClient.PostAsJsonAsync(_settings.ApiUrl, requestBody, cancellationToken);
-            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-            payment.ResponsePayload = payload;
-            if (!response.IsSuccessStatusCode)
-            {
-                payment.MensajeError = $"Consulta PayU respondio {(int)response.StatusCode}.";
-                await db.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            using var document = JsonDocument.Parse(payload);
-            var transaction = document.RootElement
-                .GetProperty("result")
-                .GetProperty("payload")
-                .GetProperty("transactions")
-                .EnumerateArray()
-                .FirstOrDefault();
-            if (transaction.ValueKind == JsonValueKind.Undefined)
-            {
-                await db.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            var state = transaction.GetProperty("transactionResponse").GetProperty("state").GetString();
-            if (string.IsNullOrWhiteSpace(state))
-            {
-                await db.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            payment.TransaccionPayU ??= transaction.TryGetProperty("transactionId", out var trxId) ? trxId.GetString() : null;
-            payment.OrderIdPayU ??= document.RootElement
-                .GetProperty("result")
-                .GetProperty("payload")
-                .TryGetProperty("id", out var orderId) ? orderId.GetRawText() : null;
-            payment.ValorPagado = transaction.GetProperty("transactionResponse").TryGetProperty("totalAmount", out var totalAmount)
-                ? ParseDecimal(totalAmount.GetRawText())
-                : payment.ValorPagado;
-            payment.Estado = MapQueryStatus(state);
-            if (payment.Estado == StatusApproved)
-            {
-                await db.Entry(payment).Reference(x => x.Cuenta).LoadAsync(cancellationToken);
-                if (payment.Cuenta is not null)
-                {
-                    await db.Entry(payment.Cuenta).Collection(x => x.Items).LoadAsync(cancellationToken);
-                    await db.Entry(payment.Cuenta).Collection(x => x.Pagos).LoadAsync(cancellationToken);
-                }
-                await ApplyApprovedPaymentAsync(payment, cancellationToken);
-            }
-
             await db.SaveChangesAsync(cancellationToken);
+            return;
         }
-        catch (Exception ex)
+
+        payment.ResponsePayload = result.ResponsePayload ?? payment.ResponsePayload;
+        if (!result.Success)
         {
-            logger.LogWarning(ex, "No fue posible consultar el estado PayU para el pago {PaymentId}", paymentId);
+            payment.MensajeError = result.ErrorMessage ?? payment.MensajeError;
+            await db.SaveChangesAsync(cancellationToken);
+            return;
         }
+
+        if (string.IsNullOrWhiteSpace(result.InternalStatus))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        payment.TransaccionPayU ??= result.TransactionId;
+        payment.OrderIdPayU ??= result.OrderId;
+        payment.ValorPagado = result.ValorPagado ?? payment.ValorPagado;
+        payment.Estado = result.InternalStatus;
+        if (payment.Estado == PaymentGatewayStatuses.Approved)
+        {
+            await db.Entry(payment).Reference(x => x.Cuenta).LoadAsync(cancellationToken);
+            if (payment.Cuenta is not null)
+            {
+                await db.Entry(payment.Cuenta).Collection(x => x.Items).LoadAsync(cancellationToken);
+                await db.Entry(payment.Cuenta).Collection(x => x.Pagos).LoadAsync(cancellationToken);
+            }
+
+            await ApplyApprovedPaymentAsync(payment, cancellationToken);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 
-    private CheckoutDescriptor BuildCheckoutDescriptor(Cuenta cuenta, int paymentId, string referencia, string metodo, decimal valor, string moneda)
-    {
-        var description = $"Pago cuenta {cuenta.Numero} - MRS Drunk";
-        var signature = BuildCheckoutSignature(referencia, valor, moneda);
-        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["merchantId"] = _settings.MerchantId,
-            ["accountId"] = _settings.AccountId,
-            ["description"] = description,
-            ["referenceCode"] = referencia,
-            ["amount"] = valor.ToString("0.00", CultureInfo.InvariantCulture),
-            ["tax"] = "0",
-            ["taxReturnBase"] = "0",
-            ["currency"] = moneda,
-            ["signature"] = signature,
-            ["test"] = _settings.IsSandbox ? "1" : "0",
-            ["responseUrl"] = _settings.ResponseUrl,
-            ["confirmationUrl"] = _settings.ConfirmationUrl,
-            ["extra1"] = cuenta.Id.ToString(CultureInfo.InvariantCulture),
-            ["extra2"] = cuenta.Numero,
-            ["extra3"] = paymentId.ToString(CultureInfo.InvariantCulture)
-        };
-
-        if (!string.IsNullOrWhiteSpace(cuenta.Cliente))
-        {
-            fields["buyerFullName"] = cuenta.Cliente!;
-        }
-
-        switch (metodo)
-        {
-            case "QR_BREB":
-                fields["selectedPaymentMethod"] = "REDEBAN_INTEROPERABLE";
-                fields["paymentMethods"] = "REDEBAN_INTEROPERABLE";
-                break;
-            case "PSE":
-                fields["selectedPaymentMethod"] = "PSE";
-                fields["paymentMethods"] = "PSE";
-                break;
-            case "CARD":
-                fields["selectedPaymentMethod"] = "VISA";
-                fields["paymentMethods"] = "VISA,MASTERCARD,AMEX,DINERS,CODENSA,VISA_DEBIT,MASTERCARD_DEBIT";
-                break;
-            default:
-                fields["paymentMethods"] = "REDEBAN_INTEROPERABLE,PSE,VISA,MASTERCARD,AMEX,DINERS,CODENSA,VISA_DEBIT,MASTERCARD_DEBIT";
-                break;
-        }
-
-        return new CheckoutDescriptor(fields, $"Pago {metodo} preparado para PayU.");
-    }
-
-    private string BuildCheckoutSignature(string referencia, decimal valor, string moneda)
-    {
-        var raw = $"{_settings.ApiKey}~{_settings.MerchantId}~{referencia}~{valor.ToString("0.00", CultureInfo.InvariantCulture)}~{moneda}";
-        using var md5 = MD5.Create();
-        var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(raw));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private bool ValidateConfirmationSignature(IDictionary<string, string> data, PagoPasarela payment)
-    {
-        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
-        {
-            return false;
-        }
-
-        var statePol = GetValue(data, "state_pol", "transactionState") ?? string.Empty;
-        var reference = payment.ReferenciaUnica;
-        var value = ParseDecimal(GetValue(data, "value", "TX_VALUE"));
-        var currency = NormalizeCurrency(GetValue(data, "currency", "currency_pol"));
-        var signature = GetValue(data, "sign", "signature");
-        if (string.IsNullOrWhiteSpace(signature))
-        {
-            return false;
-        }
-
-        var raw = $"{_settings.ApiKey}~{_settings.MerchantId}~{reference}~{value.ToString("0.0", CultureInfo.InvariantCulture)}~{currency}~{statePol}";
-        using var md5 = MD5.Create();
-        var hash = Convert.ToHexString(md5.ComputeHash(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
-        return string.Equals(hash, signature.Trim().ToLowerInvariant(), StringComparison.Ordinal);
-    }
-
-    private static bool IsManualConfirmedPayment(CuentaPago pago) =>
+    private bool IsManualConfirmedPayment(CuentaPago pago) =>
         !string.Equals(pago.Estado, StatusDuplicateVoided, StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(pago.Origen, ProviderPayU, StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(pago.Origen, gatewayAdapter.Proveedor, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase) &&
         string.Equals(pago.MetodoPago, "Efectivo", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsClosureEligiblePayment(CuentaPago pago) =>
+    private bool IsClosureEligiblePayment(CuentaPago pago) =>
         (
             !string.Equals(pago.Estado, StatusDuplicateVoided, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(pago.MetodoPago, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
@@ -889,10 +744,10 @@ public sealed class PaymentService(
         ) ||
         (
             !string.Equals(pago.Estado, StatusDuplicateVoided, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(pago.Origen, ProviderPayU, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pago.Origen, gatewayAdapter.Proveedor, StringComparison.OrdinalIgnoreCase) &&
             (
                 string.Equals(pago.Estado, "APLICADO", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(pago.Estado, StatusApproved, StringComparison.OrdinalIgnoreCase)
+                string.Equals(pago.Estado, PaymentGatewayStatuses.Approved, StringComparison.OrdinalIgnoreCase)
             )
         );
 
@@ -923,24 +778,6 @@ public sealed class PaymentService(
         return duplicates.OrderBy(x => x.Id).First();
     }
 
-    private static string NormalizeMethod(string? method)
-    {
-        var value = (method ?? string.Empty).Trim().ToUpperInvariant();
-        return value switch
-        {
-            "QR_BREB" => value,
-            "CARD" => value,
-            "PSE" => value,
-            "PAYMENT_LINK" => value,
-            _ => throw new InvalidOperationException("El metodo de pago no es valido para PayU.")
-        };
-    }
-
-    private string NormalizeCurrency(string? currency)
-    {
-        return string.IsNullOrWhiteSpace(currency) ? _settings.Currency.ToUpperInvariant() : currency.Trim().ToUpperInvariant();
-    }
-
     private static string BuildReference(Cuenta cuenta)
     {
         var mesa = string.IsNullOrWhiteSpace(cuenta.Mesa) ? "SINMESA" : new string(cuenta.Mesa.Trim().ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
@@ -961,7 +798,7 @@ public sealed class PaymentService(
 
     private bool ShouldRefreshStatus(PagoPasarela payment)
     {
-        if (payment.Estado != StatusPending || !_settings.HasCredentials)
+        if (payment.Estado != PaymentGatewayStatuses.Pending || !gatewayAdapter.IsConfigured)
         {
             return false;
         }
@@ -1005,7 +842,7 @@ public sealed class PaymentService(
             payment.FechaCreacion,
             payment.FechaExpiracion,
             payment.FechaConfirmacion,
-            payment.Estado == StatusPending ? payment.CheckoutUrl : null,
+            payment.Estado == PaymentGatewayStatuses.Pending ? payment.CheckoutUrl : null,
             BuildStatusMessage(payment));
     }
 
@@ -1013,70 +850,15 @@ public sealed class PaymentService(
     {
         return payment.Estado switch
         {
-            StatusApproved => "Pago aprobado por PayU y aplicado a la cuenta.",
-            StatusRejected => "PayU rechazo el pago. Puedes generar un nuevo intento.",
-            StatusDeclined => "La transaccion fue declinada por PayU.",
-            StatusExpired => "El intento de pago expiro. Genera uno nuevo.",
+            PaymentGatewayStatuses.Approved => "Pago aprobado por la pasarela y aplicado a la cuenta.",
+            PaymentGatewayStatuses.Rejected => "La pasarela rechazo el pago. Puedes generar un nuevo intento.",
+            PaymentGatewayStatuses.Declined => "La transaccion fue declinada por la pasarela.",
+            PaymentGatewayStatuses.Expired => "El intento de pago expiro. Genera uno nuevo.",
             StatusCancelled => "Este intento fue cancelado por un nuevo intento.",
-            StatusError => payment.MensajeError ?? "El pago no pudo validarse de forma segura.",
-            _ => "Esperando confirmacion oficial de PayU."
+            PaymentGatewayStatuses.Error => payment.MensajeError ?? "El pago no pudo validarse de forma segura.",
+            _ => "Esperando confirmacion oficial de la pasarela."
         };
     }
-
-    private static string MapPayUStatus(string? statePol)
-    {
-        return statePol switch
-        {
-            "4" => StatusApproved,
-            "5" => StatusExpired,
-            "6" => StatusDeclined,
-            "104" => StatusError,
-            "7" => StatusPending,
-            _ => StatusRejected
-        };
-    }
-
-    private static string MapQueryStatus(string? state)
-    {
-        return (state ?? string.Empty).Trim().ToUpperInvariant() switch
-        {
-            "APPROVED" => StatusApproved,
-            "DECLINED" => StatusDeclined,
-            "ERROR" => StatusError,
-            "EXPIRED" => StatusExpired,
-            "PENDING" => StatusPending,
-            _ => StatusRejected
-        };
-    }
-
-    private static decimal ParseDecimal(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return 0;
-        }
-
-        var normalized = value.Replace(",", ".", StringComparison.Ordinal);
-        return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
-            ? decimal.Round(parsed, 2)
-            : 0;
-    }
-
-    private static string? GetValue(IDictionary<string, string> data, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (data.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
-            {
-                return value.Trim();
-            }
-        }
-
-        return null;
-    }
-
-    private static string HtmlEncode(string value) =>
-        System.Net.WebUtility.HtmlEncode(value);
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -1090,8 +872,4 @@ public sealed class PaymentService(
 
         return $"{original.Trim()} | {message}";
     }
-
-    private sealed record CheckoutDescriptor(
-        IReadOnlyDictionary<string, string> Fields,
-        string Message);
 }
