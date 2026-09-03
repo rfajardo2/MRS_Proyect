@@ -10,3 +10,5 @@ node_modules/
 dist/
 coverage/
 publish/
+artifacts/verify-build/
+artifacts/dev-logs/*.pids.json

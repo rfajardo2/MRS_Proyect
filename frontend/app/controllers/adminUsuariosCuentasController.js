@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('AdminUsuariosCuentasController', function (operacionService, productosService, configuracionService, authService) {
+  angular.module('mrsDrunkApp').controller('AdminUsuariosCuentasController', function (operacionService, productosService, configuracionService, authService, swalTheme) {
     var vm = this;
     vm.cuentas = [];
     vm.filtered = [];
@@ -100,9 +100,9 @@
         showCancelButton: true,
         confirmButtonText: 'Eliminar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         operacionService.eliminarItemUsuario(vm.selected.id, item.id, { motivo: result.value || '' }).then(function () {
@@ -141,9 +141,9 @@
         showCancelButton: true,
         confirmButtonText: 'Eliminar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef233c',
-        background: '#141417',
-        color: '#f7f7f8'
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (!result.isConfirmed) { return; }
         operacionService.eliminarPagoUsuario(vm.selected.id, pago.id).then(function () {
@@ -249,15 +249,15 @@
       var message = err.status === 403
         ? 'Tu rol no tiene permiso para esta accion. Revisa permisos de Cuentas por usuario.'
         : (err.data && err.data.message ? err.data.message : 'No fue posible completar la operacion.');
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
 
     function showWarning(title, text) {
-      Swal.fire({ title: title, text: text, icon: 'warning', background: '#141417', color: '#f7f7f8', confirmButtonColor: '#ef233c' });
+      Swal.fire({ title: title, text: text, icon: 'warning', background: swalTheme.background, color: swalTheme.color, confirmButtonColor: swalTheme.confirmButtonColor });
     }
 
     function showSuccess(title) {
-      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: '#141417', color: '#f7f7f8' });
+      Swal.fire({ title: title, icon: 'success', timer: 1200, showConfirmButton: false, background: swalTheme.background, color: swalTheme.color });
     }
 
     function formatMoney(value) {

@@ -16,6 +16,18 @@
         controllerAs: 'vm',
         public: true
       })
+      .when('/payment/result', {
+        templateUrl: 'app/views/payment-result.html',
+        controller: 'PaymentResultController',
+        controllerAs: 'vm',
+        public: true
+      })
+      .when('/pedido/:token', {
+        templateUrl: 'app/views/seguimiento-publico.html',
+        controller: 'SeguimientoPublicoController',
+        controllerAs: 'vm',
+        public: true
+      })
       .when('/login', {
         templateUrl: 'app/views/login.html',
         controller: 'LoginController',
@@ -86,6 +98,15 @@
       .when('/operacion/caja', {
         templateUrl: 'app/views/caja.html'
       })
+      .when('/operacion/pagos-payu', {
+        templateUrl: 'app/views/admin-pagos-payu.html'
+      })
+      .when('/operacion/pagos-payu-reportes', {
+        templateUrl: 'app/views/admin-pagos-payu-reportes.html'
+      })
+      .when('/preparacion', {
+        templateUrl: 'app/views/preparacion.html'
+      })
       .when('/admin-cuentas', {
         templateUrl: 'app/views/admin-cuentas.html'
       })
@@ -97,6 +118,9 @@
       })
       .when('/admin-cuentas/balance', {
         templateUrl: 'app/views/admin-balance-general.html'
+      })
+      .when('/ayuda', {
+        templateUrl: 'app/views/ayuda.html'
       })
       .otherwise({ redirectTo: '/inicio' });
 

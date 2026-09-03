@@ -21,4 +21,5 @@ public sealed class CuentaItem
     public Producto? Producto { get; set; }
     public Usuario? UsuarioCreacion { get; set; }
     public Usuario? UsuarioEliminacion { get; set; }
+    public ComandaDetalle? ComandaDetalle { get; set; }
 }

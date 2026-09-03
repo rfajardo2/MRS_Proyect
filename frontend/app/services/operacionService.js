@@ -13,6 +13,7 @@
       registrarPago: function (cuentaId, data) { return $http.post(url + '/cuentas/' + cuentaId + '/pagos', data); },
       eliminarPago: function (cuentaId, pagoId) { return $http.delete(url + '/cuentas/' + cuentaId + '/pagos/' + pagoId); },
       solicitarCierre: function (cuentaId) { return $http.post(url + '/cuentas/' + cuentaId + '/solicitar-cierre'); },
+      generarSeguimiento: function (cuentaId) { return $http.post(url + '/cuentas/' + cuentaId + '/generar-seguimiento').then(function (res) { return res.data; }); },
       balanceDia: function () { return $http.get(url + '/balance-dia').then(function (res) { return res.data; }); },
       cajaActual: function () { return $http.get(apiConfig.baseUrl + '/caja/turno/actual').then(function (res) { return res.data; }); },
       cajaTurnos: function () { return $http.get(apiConfig.baseUrl + '/caja/turnos').then(function (res) { return res.data; }); },

@@ -2,6 +2,6 @@
   'use strict';
 
   angular.module('mrsDrunkApp').constant('apiConfig', {
-    baseUrl: '/api'
+    baseUrl: 'http://localhost:5127/api'
   });
 })();

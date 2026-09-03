@@ -1,0 +1,187 @@
+<section class="page" ng-controller="AdminPagosPayUReportesController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Operacion</span>
+      <h2>Reportes ejecutivos PayU</h2>
+    </div>
+    <div class="page-actions">
+      <button class="btn ghost" type="button" ng-click="vm.exportExcel()">
+        <i class="fa-solid fa-file-excel"></i>
+        <span>Exportar Excel</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.goToTraceability()">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Volver a trazabilidad</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.load()">
+        <i class="fa-solid fa-rotate"></i>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </div>
+
+  <form class="toolbar admin-user-filters payment-trace-filters executive-payu-filters" ng-submit="$event.preventDefault()">
+    <input type="date" ng-model="vm.filters.desde">
+    <input type="date" ng-model="vm.filters.hasta">
+    <select ng-model="vm.filters.usuarioId" ng-options="u.id as u.nombre for u in vm.userOptions">
+      <option value="">Todos los usuarios</option>
+    </select>
+    <select ng-model="vm.filters.metodo">
+      <option value="">Todos los metodos</option>
+      <option>QR_BREB</option>
+      <option>CARD</option>
+      <option>PSE</option>
+      <option>PAYMENT_LINK</option>
+    </select>
+    <select ng-model="vm.filters.estado">
+      <option value="">Todos los estados</option>
+      <option>PENDING</option>
+      <option>APPROVED</option>
+      <option>REJECTED</option>
+      <option>DECLINED</option>
+      <option>ERROR</option>
+      <option>EXPIRED</option>
+      <option>CANCELLED</option>
+    </select>
+    <div class="page-actions">
+      <button class="btn primary" type="button" ng-click="vm.runFilters()">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Filtrar</span>
+      </button>
+      <button class="btn ghost" type="button" ng-click="vm.resetFilters()">
+        <i class="fa-solid fa-eraser"></i>
+        <span>Limpiar</span>
+      </button>
+    </div>
+  </form>
+
+  <div class="metric-grid" ng-if="vm.report">
+    <article class="metric"><span>Intentos</span><strong>{{vm.report.headline.intentos}}</strong></article>
+    <article class="metric"><span>Aprobados</span><strong>{{vm.report.headline.aprobados}}</strong></article>
+    <article class="metric"><span>Pendientes</span><strong>{{vm.report.headline.pendientes}}</strong></article>
+    <article class="metric"><span>Fallidos</span><strong>{{vm.report.headline.fallidos}}</strong></article>
+    <article class="metric"><span>Expirados</span><strong>{{vm.report.headline.expirados}}</strong></article>
+    <article class="metric"><span>Cancelados</span><strong>{{vm.report.headline.cancelados}}</strong></article>
+    <article class="metric"><span>Discrepancias</span><strong>{{vm.report.headline.discrepancias}}</strong></article>
+    <article class="metric"><span>Confirmaciones huerfanas</span><strong>{{vm.report.headline.confirmacionesHuerfanas}}</strong></article>
+    <article class="metric"><span>Valor esperado</span><strong>{{vm.report.headline.valorEsperado | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Valor aprobado</span><strong>{{vm.report.headline.valorAprobado | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Valor pendiente</span><strong>{{vm.report.headline.valorPendiente | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Ticket promedio aprobado</span><strong>{{vm.report.headline.ticketPromedioAprobado | currency:'$':0}}</strong></article>
+    <article class="metric"><span>Tasa de aprobacion</span><strong>{{vm.report.headline.tasaAprobacion}}%</strong></article>
+  </div>
+
+  <div class="detail-grid balance-detail-grid executive-payu-grid" ng-if="vm.report">
+    <div class="panel">
+      <h3>Desempeno por metodo</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Metodo</th><th>Intentos</th><th>Aprobados</th><th>Pendientes</th><th>Fallidos</th><th>Tasa</th><th>Valor aprobado</th><th>Discrepancias</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="metodo in vm.report.metodos">
+              <td>{{metodo.metodoPago}}</td>
+              <td>{{metodo.intentos}}</td>
+              <td>{{metodo.aprobados}}</td>
+              <td>{{metodo.pendientes}}</td>
+              <td>{{metodo.fallidos}}</td>
+              <td>{{metodo.tasaAprobacion}}%</td>
+              <td>{{metodo.valorAprobado | currency:'$':0}}</td>
+              <td>{{metodo.discrepancias}}</td>
+            </tr>
+            <tr ng-if="!vm.report.metodos.length"><td colspan="8" class="muted">Sin datos para este filtro</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Usuarios con mayor actividad</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Usuario</th><th>Intentos</th><th>Aprobados</th><th>Pendientes</th><th>Fallidos</th><th>Tasa</th><th>Valor aprobado</th><th>Discrepancias</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="usuario in vm.report.usuarios">
+              <td>{{usuario.mesero}}</td>
+              <td>{{usuario.intentos}}</td>
+              <td>{{usuario.aprobados}}</td>
+              <td>{{usuario.pendientes}}</td>
+              <td>{{usuario.fallidos}}</td>
+              <td>{{usuario.tasaAprobacion}}%</td>
+              <td>{{usuario.valorAprobado | currency:'$':0}}</td>
+              <td>{{usuario.discrepancias}}</td>
+            </tr>
+            <tr ng-if="!vm.report.usuarios.length"><td colspan="8" class="muted">Sin usuarios para este filtro</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-grid balance-detail-grid executive-payu-grid" ng-if="vm.report">
+    <div class="panel">
+      <h3>Tendencia diaria</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Fecha</th><th>Intentos</th><th>Aprobados</th><th>Pendientes</th><th>Fallidos</th><th>Valor esperado</th><th>Valor aprobado</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="dia in vm.report.timeline">
+              <td>{{dia.fecha | date:'yyyy-MM-dd'}}</td>
+              <td>{{dia.intentos}}</td>
+              <td>{{dia.aprobados}}</td>
+              <td>{{dia.pendientes}}</td>
+              <td>{{dia.fallidos}}</td>
+              <td>{{dia.valorEsperado | currency:'$':0}}</td>
+              <td>{{dia.valorAprobado | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.report.timeline.length"><td colspan="7" class="muted">Sin datos para este periodo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Hallazgos principales</h3>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead><tr><th>Hallazgo</th><th>Total</th><th>Valor comprometido</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="issue in vm.report.hallazgos">
+              <td>{{issue.tipo}}</td>
+              <td>{{issue.total}}</td>
+              <td>{{issue.valorComprometido | currency:'$':0}}</td>
+            </tr>
+            <tr ng-if="!vm.report.hallazgos.length"><td colspan="3" class="muted">Sin hallazgos para este periodo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" ng-if="vm.report">
+    <h3>Pagos con incidencias</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cuenta</th><th>Usuario</th><th>Metodo</th><th>Estado</th><th>Esperado</th><th>Pagado</th><th>Discrepancias</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="payment in vm.report.pagosConIncidencias">
+            <td>
+              <strong>{{payment.cuentaNumero}}</strong>
+              <small class="muted block">{{payment.referencia}}</small>
+            </td>
+            <td>{{payment.mesero}}</td>
+            <td>{{payment.metodoPago}}</td>
+            <td><span class="status-chip" ng-class="payment.estado === 'APPROVED' ? 'ok' : (payment.estado === 'PENDING' ? 'pending' : 'danger')">{{payment.estado}}</span></td>
+            <td>{{payment.valorEsperado | currency:'$':0}}</td>
+            <td>{{payment.valorPagado | currency:'$':0}}</td>
+            <td>
+              <div class="discrepancy-badges">
+                <span class="tiny-badge danger" ng-repeat="issue in payment.discrepancias track by $index">{{issue}}</span>
+              </div>
+            </td>
+          </tr>
+          <tr ng-if="!vm.report.pagosConIncidencias.length"><td colspan="7" class="muted">Sin incidencias para este filtro</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

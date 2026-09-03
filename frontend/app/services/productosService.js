@@ -6,6 +6,7 @@
     return {
       categorias: function () { return $http.get(url + '/categorias').then(function (res) { return res.data; }); },
       unidades: function () { return $http.get(url + '/unidades').then(function (res) { return res.data; }); },
+      areasPreparacion: function () { return $http.get(url + '/areas-preparacion').then(function (res) { return res.data; }); },
       crearCategoria: function (data) { return $http.post(url + '/categorias', data); },
       editarCategoria: function (id, data) { return $http.put(url + '/categorias/' + id, data); },
       productos: function () { return $http.get(url).then(function (res) { return res.data; }); },

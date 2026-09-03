@@ -180,7 +180,7 @@ public sealed class CajaController(MrsDrunkDbContext db) : ControllerBase
             .OrderByDescending(x => x.FechaApertura)
             .ToListAsync(cancellationToken);
 
-        var pagos = cuentas.SelectMany(x => x.Pagos).ToList();
+        var pagos = cuentas.SelectMany(x => OperacionController.EffectivePayments(x.Pagos)).ToList();
         var pagosPorMetodo = pagos
             .GroupBy(x => string.IsNullOrWhiteSpace(x.MetodoPago) ? "Sin metodo" : x.MetodoPago)
             .Select(g => new CajaMetodoPagoDto(g.Key, g.Sum(x => x.Valor), g.Count()))
@@ -198,7 +198,7 @@ public sealed class CajaController(MrsDrunkDbContext db) : ControllerBase
                 x.Mesero?.NombreCompleto ?? "Mesero",
                 x.Estado,
                 x.Total,
-                x.Pagos.Sum(p => p.Valor),
+                OperacionController.EffectivePayments(x.Pagos).Sum(p => p.Valor),
                 x.FechaApertura,
                 x.FechaCierre)).ToList());
     }

@@ -28,13 +28,37 @@
     <div class="panel" ng-if="vm.selected">
       <h3>Cuenta {{vm.selected.numero}}</h3>
       <p>{{vm.selected.cliente || 'Sin cliente'}} - {{vm.selected.mesa || 'Sin mesa'}}</p>
+      <div class="toolbar">
+        <button class="btn ghost" type="button" ng-click="vm.verQR()" ng-disabled="!vm.canEdit"><i class="fa-solid fa-qrcode"></i><span>{{vm.selected.tokenPublico ? 'Ver QR' : 'Generar QR'}}</span></button>
+      </div>
+      <p class="comanda-resumen" ng-if="vm.resumen.length">
+        Estado pedido:
+        <span ng-repeat="r in vm.resumen track by r.estado">{{r.count}} {{r.label}}<span ng-if="!$last">, </span></span>
+      </p>
       <form class="inline-form account-item-form" ng-submit="vm.agregarItem()" ng-if="vm.isEditable(vm.selected)">
         <select ng-model="vm.item.productoId" ng-options="p.id as p.nombre for p in vm.productos" required></select>
         <input type="number" step="0.001" ng-model="vm.item.cantidad" placeholder="Cantidad" required>
         <input type="number" step="1" ng-model="vm.item.precioUnitario" placeholder="Precio opcional">
         <input type="number" step="1" ng-model="vm.item.descuento" placeholder="Descuento">
+        <input ng-model="vm.item.observacion" placeholder="Observacion (opcional)">
         <button class="btn primary" ng-disabled="!vm.canEdit"><i class="fa-solid fa-plus"></i></button>
       </form>
+      <div class="table-wrap pendientes-wrap" ng-if="vm.pendientes.length">
+        <table>
+          <thead><tr><th>Por enviar</th><th>Cant.</th><th>Observacion</th><th></th></tr></thead>
+          <tbody>
+            <tr ng-repeat="p in vm.pendientes">
+              <td>{{p.productoNombre}}</td>
+              <td>{{p.cantidad}}</td>
+              <td>{{p.observacion || '-'}}</td>
+              <td class="actions"><button class="icon-btn" type="button" ng-click="vm.quitarPendiente($index)"><i class="fa-solid fa-xmark"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="toolbar pendientes-toolbar">
+          <button class="btn primary" type="button" ng-click="vm.enviarComanda()" ng-disabled="!vm.canEdit"><i class="fa-solid fa-paper-plane"></i><span>Enviar comanda</span></button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th><th></th></tr></thead>
@@ -44,6 +68,8 @@
                 <strong>{{item.productoNombre}}</strong>
                 <span class="deleted-badge" ng-if="item.eliminado">Eliminado</span>
                 <small ng-if="item.eliminado && item.motivoEliminacion">{{item.motivoEliminacion}}</small>
+                <br ng-if="item.comandaNumero">
+                <span class="comanda-item-badge" ng-if="item.comandaNumero">{{item.comandaNumero}} &middot; {{item.comandaEstadoDetalle}}</span>
               </td>
               <td>{{item.cantidad}}</td>
               <td ng-class="{'zero-value': item.eliminado}">{{(item.eliminado ? 0 : item.precioUnitario) | currency:'$':0}}</td>
@@ -53,8 +79,60 @@
           </tbody>
         </table>
       </div>
+      <div class="comandas-panel panel-lite" ng-if="vm.comandas.length">
+        <div class="section-header"><strong>Comandas enviadas</strong></div>
+        <div class="comanda-card" ng-repeat="comanda in vm.comandas">
+          <div class="comanda-card-header">
+            <strong>{{comanda.numero}}</strong>
+            <span class="muted">{{comanda.fechaCreacion | date:'HH:mm'}}</span>
+          </div>
+          <table>
+            <tbody>
+              <tr ng-repeat="detalle in comanda.detalles">
+                <td>{{detalle.productoNombre}} x{{detalle.cantidad}}</td>
+                <td><span class="status" ng-class="{off: detalle.estado === 'PENDIENTE'}">{{detalle.estado}}</span></td>
+                <td>{{detalle.observacion || ''}}</td>
+                <td class="actions">
+                  <button class="btn ghost" type="button" ng-if="detalle.estado === 'DESPACHADO'" ng-click="vm.confirmarEntrega(detalle)" ng-disabled="!vm.canEdit">Entregado a mesa</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="payu-payment-panel panel-lite" ng-if="vm.isEditable(vm.selected)">
+        <div class="section-header">
+          <div>
+            <strong>Pagos PayU</strong>
+            <small>La cuenta solo se confirma cuando PayU aprueba oficialmente la transaccion.</small>
+          </div>
+          <span class="status-chip" ng-class="{'ok': vm.payu.status && vm.payu.status.estado === 'APPROVED', 'pending': !vm.payu.status || vm.payu.status.estado === 'PENDING'}">
+            {{(vm.payu.status && vm.payu.status.estado) || 'SIN_INTENTO'}}
+          </span>
+        </div>
+        <div class="payu-actions">
+          <button class="btn primary" type="button" ng-click="vm.iniciarPagoPayU('QR_BREB')" ng-disabled="vm.payu.busy"><i class="fa-solid fa-qrcode"></i><span>QR Bre-B</span></button>
+          <button class="btn ghost" type="button" ng-click="vm.iniciarPagoPayU('PSE')" ng-disabled="vm.payu.busy"><i class="fa-solid fa-building-columns"></i><span>PSE</span></button>
+          <button class="btn ghost" type="button" ng-click="vm.iniciarPagoPayU('CARD')" ng-disabled="vm.payu.busy"><i class="fa-solid fa-credit-card"></i><span>Tarjeta</span></button>
+          <button class="btn ghost" type="button" ng-click="vm.iniciarPagoPayU('PAYMENT_LINK')" ng-disabled="vm.payu.busy"><i class="fa-solid fa-link"></i><span>Link</span></button>
+        </div>
+        <div class="payu-status-card" ng-if="vm.payu.status">
+          <div class="payu-status-grid">
+            <span><b>Referencia:</b> {{vm.payu.status.referencia}}</span>
+            <span><b>Metodo:</b> {{vm.payu.status.metodoPago}}</span>
+            <span><b>Esperado:</b> {{vm.payu.status.valorEsperado | currency:'$':0}}</span>
+            <span><b>Pagado:</b> {{vm.payu.status.valorPagado | currency:'$':0}}</span>
+          </div>
+          <p class="muted payu-message">{{vm.payu.status.message}}</p>
+          <div class="payu-actions compact">
+            <button class="btn ghost" type="button" ng-click="vm.consultarEstadoPago()"><i class="fa-solid fa-rotate"></i><span>Consultar estado</span></button>
+            <button class="btn ghost" type="button" ng-click="vm.reabrirCheckout()" ng-if="vm.payu.status.checkoutUrlAbsolute"><i class="fa-solid fa-up-right-from-square"></i><span>Abrir PayU</span></button>
+          </div>
+        </div>
+      </div>
+
       <form class="toolbar account-payment-form" ng-submit="vm.registrarPago()" ng-if="vm.isEditable(vm.selected)">
-        <select ng-model="vm.pago.metodoPago"><option>Efectivo</option><option>Datafono</option><option>Nequi</option><option>Transferencia</option></select>
+        <select ng-model="vm.pago.metodoPago"><option>Efectivo</option></select>
         <input type="number" step="1" ng-model="vm.pago.valor" placeholder="Valor recibido">
         <input ng-model="vm.pago.referencia" placeholder="Referencia">
         <label class="check compact"><input type="checkbox" ng-model="vm.pago.incluyePropina" ng-change="vm.togglePropina()"> Incluye propina</label>
@@ -62,7 +140,7 @@
           <input type="number" step="1" ng-model="vm.pago.valorPropina" ng-change="vm.normalizarPagoConPropina()" placeholder="Propina manual" ng-disabled="!vm.pago.incluyePropina">
           <button class="btn ghost" type="button" ng-click="vm.aplicarPropinaSugerida()" ng-disabled="!vm.pago.incluyePropina">Usar {{vm.configuracion.porcentajePropinaDefecto || 0}}%</button>
         </div>
-        <button class="btn ghost" ng-disabled="!vm.canEdit">Registrar pago</button>
+        <button class="btn ghost" ng-disabled="!vm.canEdit">Registrar efectivo</button>
       </form>
       <div class="table-wrap payments-table">
         <table>

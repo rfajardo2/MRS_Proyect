@@ -53,7 +53,10 @@ public sealed record ProductoDto(
     string? UnidadInventario,
     decimal FactorConversionInventario,
     bool ControlaInventario,
-    bool Estado);
+    bool Estado,
+    int? AreaPreparacionId,
+    string? AreaPreparacion,
+    bool RequierePreparacion);
 
 public sealed record UpsertProductoRequest(
     int CategoriaId,
@@ -65,7 +68,9 @@ public sealed record UpsertProductoRequest(
     int? UnidadInventarioId,
     decimal? FactorConversionInventario,
     bool ControlaInventario,
-    bool Estado);
+    bool Estado,
+    int? AreaPreparacionId,
+    bool RequierePreparacion);
 
 public sealed record ProductoRecetaDto(
     int Id,
@@ -88,7 +93,9 @@ public sealed record CuentaItemDto(
     decimal Descuento,
     decimal Total,
     bool Eliminado,
-    string? MotivoEliminacion);
+    string? MotivoEliminacion,
+    string? ComandaNumero,
+    string? ComandaEstadoDetalle);
 
 public sealed record CuentaPagoDto(
     int Id,
@@ -98,7 +105,9 @@ public sealed record CuentaPagoDto(
     decimal ValorPropina,
     decimal ValorAplicadoCuenta,
     string? Referencia,
-    DateTime FechaPago);
+    DateTime FechaPago,
+    string Estado,
+    string Origen);
 
 public sealed record CuentaDto(
     int Id,
@@ -121,7 +130,11 @@ public sealed record CuentaDto(
     decimal SaldoPendiente,
     decimal PagoEnExceso,
     IReadOnlyCollection<CuentaItemDto> Items,
-    IReadOnlyCollection<CuentaPagoDto> Pagos);
+    IReadOnlyCollection<CuentaPagoDto> Pagos,
+    string? TokenPublico,
+    string? CodigoPublico);
+
+public sealed record SeguimientoPublicoDto(string Token, string Codigo);
 
 public sealed record CrearCuentaRequest(string? Mesa, string? Cliente, string? Observacion);
 public sealed record AgregarCuentaItemRequest(int ProductoId, decimal Cantidad, decimal? PrecioUnitario, decimal Descuento);

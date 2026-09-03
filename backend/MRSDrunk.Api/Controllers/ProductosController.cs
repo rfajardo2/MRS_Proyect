@@ -92,6 +92,7 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             .Include(x => x.Categoria)
             .Include(x => x.UnidadVenta)
             .Include(x => x.UnidadInventario)
+            .Include(x => x.AreaPreparacion)
             .Where(x => x.EmpresaId == empresaId)
             .OrderBy(x => x.Categoria!.Orden)
             .ThenBy(x => x.Nombre)
@@ -110,6 +111,7 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             .Include(x => x.Categoria)
             .Include(x => x.UnidadVenta)
             .Include(x => x.UnidadInventario)
+            .Include(x => x.AreaPreparacion)
             .Where(x => x.EmpresaId == empresaId && x.Estado && x.Categoria != null && x.Categoria.Estado)
             .OrderBy(x => x.Categoria!.Orden)
             .ThenBy(x => x.Nombre)
@@ -128,6 +130,7 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             .Include(x => x.Categoria)
             .Include(x => x.UnidadVenta)
             .Include(x => x.UnidadInventario)
+            .Include(x => x.AreaPreparacion)
             .Where(x => x.EmpresaId == empresaId && x.Estado && x.Categoria != null && x.Categoria.Estado)
             .OrderBy(x => x.Categoria!.Orden)
             .ThenBy(x => x.Nombre)
@@ -145,6 +148,7 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             .Include(x => x.Categoria)
             .Include(x => x.UnidadVenta)
             .Include(x => x.UnidadInventario)
+            .Include(x => x.AreaPreparacion)
             .Where(x => x.Estado && x.Categoria != null && x.Categoria.Estado)
             .OrderBy(x => x.Categoria!.Orden)
             .ThenBy(x => x.Nombre)
@@ -160,6 +164,20 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         var empresaId = User.GetEmpresaId();
         var unidades = await EnsureDefaultUnidades(empresaId, cancellationToken);
         return Ok(unidades);
+    }
+
+    [HttpGet("areas-preparacion")]
+    [RequirePermission("Productos.Productos.Ver")]
+    public async Task<ActionResult<IReadOnlyCollection<AreaPreparacionDto>>> GetAreasPreparacion(CancellationToken cancellationToken)
+    {
+        var empresaId = User.GetEmpresaId();
+        var data = await db.AreasPreparacion.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.Estado)
+            .OrderBy(x => x.Orden).ThenBy(x => x.Nombre)
+            .Select(x => new AreaPreparacionDto(x.Id, x.Nombre, x.Descripcion, x.Orden))
+            .ToListAsync(cancellationToken);
+
+        return Ok(data);
     }
 
     [HttpPost]
@@ -179,6 +197,7 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         await db.Entry(entity).Reference(x => x.Categoria).LoadAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.UnidadVenta).LoadAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.UnidadInventario).LoadAsync(cancellationToken);
+        await db.Entry(entity).Reference(x => x.AreaPreparacion).LoadAsync(cancellationToken);
         return Ok(ToDto(entity));
     }
 
@@ -407,6 +426,15 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             }
         }
 
+        if (request.AreaPreparacionId.HasValue)
+        {
+            var areaExists = await db.AreasPreparacion.AsNoTracking().AnyAsync(x => x.Id == request.AreaPreparacionId.Value && x.EmpresaId == empresaId && x.Estado, cancellationToken);
+            if (!areaExists)
+            {
+                return "El area de preparacion no existe o esta inactiva.";
+            }
+        }
+
         var duplicate = await db.Productos.AsNoTracking().AnyAsync(x =>
             x.EmpresaId == empresaId &&
             x.Nombre.ToUpper() == nombreNormalizado &&
@@ -428,6 +456,8 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         entity.FactorConversionInventario = request.FactorConversionInventario ?? 1;
         entity.ControlaInventario = request.ControlaInventario;
         entity.Estado = request.Estado;
+        entity.AreaPreparacionId = request.AreaPreparacionId;
+        entity.RequierePreparacion = request.RequierePreparacion;
     }
 
     private static ProductoDto ToDto(Producto x) => new(
@@ -444,7 +474,10 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         x.UnidadInventario?.Nombre,
         x.FactorConversionInventario,
         x.ControlaInventario,
-        x.Estado);
+        x.Estado,
+        x.AreaPreparacionId,
+        x.AreaPreparacion?.Nombre,
+        x.RequierePreparacion);
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

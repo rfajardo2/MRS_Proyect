@@ -1,0 +1,100 @@
+<section class="page" ng-controller="PreparacionController as vm">
+  <div class="page-title">
+    <div><span class="eyebrow">Preparacion</span><h2>Barra y cocina</h2></div>
+  </div>
+
+  <div class="toolbar">
+    <select ng-model="vm.areaId" ng-change="vm.actualizar()">
+      <option value="">Todas las areas</option>
+      <option ng-repeat="area in vm.areas" value="{{area.id}}">{{area.nombre}}</option>
+    </select>
+    <button class="btn ghost" type="button" ng-click="vm.actualizar()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
+  </div>
+
+  <div class="kanban-board">
+    <div class="kanban-column">
+      <h3>Pendientes</h3>
+      <div class="kanban-card" ng-repeat="grupo in vm.columnas.PENDIENTE">
+        <div class="kanban-card-header">
+          <strong>{{grupo.comandaNumero}}</strong>
+          <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
+        </div>
+        <p class="kanban-card-mesa">Mesa {{grupo.mesa || '-'}} - Cuenta {{grupo.cuentaNumero}}</p>
+        <div class="kanban-card-item" ng-repeat="item in grupo.detalles">
+          <p class="kanban-card-producto">{{item.productoNombre}} x{{item.cantidad}}</p>
+          <p class="kanban-card-obs" ng-if="item.observacion">Observacion: {{item.observacion}}</p>
+          <button class="btn primary" type="button" ng-if="!item.requierePreparacion" ng-click="vm.despachar(item)" ng-disabled="!vm.canGestionar">DESPACHAR (no requiere preparacion)</button>
+        </div>
+        <p class="muted">Mesero: {{grupo.mesero}}</p>
+        <button class="btn primary" type="button" ng-if="grupo.tienePreparacion" ng-click="vm.tomarComanda(grupo)" ng-disabled="!vm.canGestionar">TOMAR COMANDA</button>
+      </div>
+      <p class="muted" ng-if="!vm.columnas.PENDIENTE.length">Sin pendientes</p>
+    </div>
+
+    <div class="kanban-column">
+      <h3>En preparacion</h3>
+      <div class="kanban-card" ng-repeat="grupo in vm.columnas.EN_PREPARACION">
+        <div class="kanban-card-header">
+          <strong>{{grupo.comandaNumero}}</strong>
+          <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
+        </div>
+        <p class="kanban-card-mesa">Mesa {{grupo.mesa || '-'}} - Cuenta {{grupo.cuentaNumero}}</p>
+        <div class="kanban-card-item kanban-card-item-split" ng-repeat="item in grupo.detalles" ng-class="{'no-preparar-row': !item.preparar}">
+          <div class="kanban-card-item-info">
+            <p class="kanban-card-producto">{{item.productoNombre}} x{{item.cantidad}}</p>
+            <p class="kanban-card-obs" ng-if="item.observacion">Observacion: {{item.observacion}}</p>
+            <p class="muted" ng-if="item.usuarioToma">Tomo: {{item.usuarioToma}}</p>
+          </div>
+          <div class="prep-toggle prep-toggle-stacked">
+            <button type="button" class="prep-toggle-btn" ng-class="{active: item.preparar}" ng-click="item.preparar = true">Preparando</button>
+            <button type="button" class="prep-toggle-btn prep-toggle-no" ng-class="{active: !item.preparar}" ng-click="item.preparar = false">No preparar</button>
+          </div>
+        </div>
+        <p class="muted">Mesero: {{grupo.mesero}}</p>
+        <button class="btn primary" type="button" ng-click="vm.marcarListoComanda(grupo)" ng-disabled="!vm.canGestionar">MARCAR LISTO</button>
+      </div>
+      <p class="muted" ng-if="!vm.columnas.EN_PREPARACION.length">Sin productos en preparacion</p>
+    </div>
+
+    <div class="kanban-column">
+      <h3>Listos</h3>
+      <div class="kanban-card" ng-repeat="grupo in vm.columnas.LISTO">
+        <div class="kanban-card-header">
+          <strong>{{grupo.comandaNumero}}</strong>
+          <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
+        </div>
+        <p class="kanban-card-mesa">Mesa {{grupo.mesa || '-'}} - Cuenta {{grupo.cuentaNumero}}</p>
+        <div class="kanban-card-item kanban-card-item-split" ng-repeat="item in grupo.detalles" ng-class="{'no-preparar-row': item.estado === 'CANCELADO'}">
+          <div class="kanban-card-item-info">
+            <p class="kanban-card-producto">{{item.productoNombre}} x{{item.cantidad}}</p>
+            <p class="kanban-card-obs" ng-if="item.observacion">Observacion: {{item.observacion}}</p>
+          </div>
+          <span class="prep-status-badge cancelado" ng-if="item.estado === 'CANCELADO'">No preparado</span>
+          <span class="prep-status-badge listo" ng-if="item.estado === 'LISTO'">Listo</span>
+        </div>
+        <p class="muted">Mesero: {{grupo.mesero}}</p>
+        <button class="btn primary" type="button" ng-if="grupo.tieneListos" ng-click="vm.despacharComanda(grupo)" ng-disabled="!vm.canGestionar">DESPACHAR COMANDA</button>
+      </div>
+      <p class="muted" ng-if="!vm.columnas.LISTO.length">Sin productos listos</p>
+    </div>
+  </div>
+
+  <div class="panel-lite historial-panel">
+    <div class="section-header"><strong>Historial reciente</strong><small>Ordenado del mas reciente al mas antiguo</small></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Hora</th><th>Usuario</th><th>Producto</th><th>Cuenta / Mesa</th><th>Cambio</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="h in vm.historial">
+            <td>{{h.fecha | date:'HH:mm:ss'}}</td>
+            <td>{{h.usuario}}</td>
+            <td>{{h.productoNombre}}</td>
+            <td>{{h.cuentaNumero}} / {{h.mesa || '-'}}</td>
+            <td>{{h.estadoAnterior || 'Enviada'}} &rarr; {{h.estadoNuevo}}</td>
+          </tr>
+          <tr ng-if="!vm.historial.length"><td colspan="5" class="muted">Sin movimientos recientes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

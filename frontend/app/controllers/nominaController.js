@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('NominaController', function ($filter, $location, $q, $window, authService, nominaService) {
+  angular.module('mrsDrunkApp').controller('NominaController', function ($filter, $location, $q, $window, authService, nominaService, swalTheme) {
     var vm = this;
     vm.activeTab = resolveTab();
     vm.periodos = [];
@@ -246,12 +246,12 @@
         text: 'Desea actualizar a ' + empleado.nombreCompleto + '?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef233c',
-        cancelButtonColor: '#2b2b33',
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        cancelButtonColor: swalTheme.cancelButtonColor,
         confirmButtonText: 'Si, continuar',
         cancelButtonText: 'Cancelar',
-        background: '#141417',
-        color: '#f7f7f8'
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (result.isConfirmed) {
           nominaService.toggleEmpleado(empleado.id).then(vm.loadControl);
@@ -337,7 +337,7 @@
       });
 
       $q.all(requests).then(function () {
-        Swal.fire({ title: 'Guardado', text: 'Control diario guardado correctamente.', icon: 'success', timer: 1300, showConfirmButton: false, background: '#141417', color: '#f7f7f8' });
+        Swal.fire({ title: 'Guardado', text: 'Control diario guardado correctamente.', icon: 'success', timer: 1300, showConfirmButton: false, background: swalTheme.background, color: swalTheme.color });
         vm.loadControl();
       }).catch(showError);
     };
@@ -439,12 +439,12 @@
         text: 'Desea eliminar este registro de nomina?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef233c',
-        cancelButtonColor: '#2b2b33',
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        cancelButtonColor: swalTheme.cancelButtonColor,
         confirmButtonText: 'Eliminar',
         cancelButtonText: 'Cancelar',
-        background: '#141417',
-        color: '#f7f7f8'
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (result.isConfirmed) {
           nominaService.eliminarRegistro(vm.periodoId, registro.id).then(vm.loadControl).catch(showError);
@@ -458,12 +458,12 @@
         text: 'Despues de cerrar no se podran editar registros de este periodo.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef233c',
-        cancelButtonColor: '#2b2b33',
+        confirmButtonColor: swalTheme.confirmButtonColor,
+        cancelButtonColor: swalTheme.cancelButtonColor,
         confirmButtonText: 'Cerrar periodo',
         cancelButtonText: 'Cancelar',
-        background: '#141417',
-        color: '#f7f7f8'
+        background: swalTheme.background,
+        color: swalTheme.color
       }).then(function (result) {
         if (result.isConfirmed) {
           nominaService.cerrarPeriodo(vm.periodoId).then(vm.loadControl).catch(showError);
@@ -1103,7 +1103,7 @@
 
     function showError(err) {
       var message = err && err.data && err.data.message ? err.data.message : 'No fue posible completar la accion.';
-      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: '#141417', color: '#f7f7f8' });
+      Swal.fire({ title: 'Atencion', text: message, icon: 'error', background: swalTheme.background, color: swalTheme.color });
     }
 
     vm.load();
