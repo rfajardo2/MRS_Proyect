@@ -142,19 +142,22 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
 
     [HttpGet("menu-publico")]
     [AllowAnonymous]
-    public async Task<ActionResult<IReadOnlyCollection<ProductoDto>>> GetMenuPublico(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyCollection<ProductoMenuPublicoDto>>> GetMenuPublico(CancellationToken cancellationToken)
     {
         var productos = await db.Productos.AsNoTracking()
             .Include(x => x.Categoria)
-            .Include(x => x.UnidadVenta)
-            .Include(x => x.UnidadInventario)
-            .Include(x => x.AreaPreparacion)
             .Where(x => x.Estado && x.Categoria != null && x.Categoria.Estado)
             .OrderBy(x => x.Categoria!.Orden)
             .ThenBy(x => x.Nombre)
+            .Select(x => new ProductoMenuPublicoDto(
+                x.Id,
+                x.Categoria!.Nombre,
+                x.Nombre,
+                x.Descripcion,
+                x.PrecioVenta))
             .ToListAsync(cancellationToken);
 
-        return Ok(productos.Select(ToDto).ToList());
+        return Ok(productos);
     }
 
     [HttpGet("unidades")]
