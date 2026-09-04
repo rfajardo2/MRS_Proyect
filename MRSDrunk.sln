@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MRSDrunk.Api", "backend\MRSDrunk.Api\MRSDrunk.Api.csproj", "{04EF75AD-E5D7-48BA-B934-1A53B54741F5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MRSDrunk.Api.Tests", "backend\MRSDrunk.Api.Tests\MRSDrunk.Api.Tests.csproj", "{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,11 +31,24 @@ Global
 		{04EF75AD-E5D7-48BA-B934-1A53B54741F5}.Release|x64.Build.0 = Release|Any CPU
 		{04EF75AD-E5D7-48BA-B934-1A53B54741F5}.Release|x86.ActiveCfg = Release|Any CPU
 		{04EF75AD-E5D7-48BA-B934-1A53B54741F5}.Release|x86.Build.0 = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|x64.Build.0 = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Debug|x86.Build.0 = Debug|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|x64.ActiveCfg = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|x64.Build.0 = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|x86.ActiveCfg = Release|Any CPU
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{04EF75AD-E5D7-48BA-B934-1A53B54741F5} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{FAA0D157-FCD2-45DC-B5D6-DE32B92726BA} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 	EndGlobalSection
 EndGlobal
