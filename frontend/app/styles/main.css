@@ -1975,6 +1975,10 @@ dd { margin: 0; }
     .payu-actions.compact,
     .payu-status-grid,
     .payment-result-metrics { grid-template-columns: 1fr; }
+    .account-create-form > input,
+    .account-payment-form > input,
+    .account-payment-form > select,
+    .tip-entry input { flex: 1 1 auto; }
     .account-create-form > .btn,
     .account-payment-form > .btn,
     .account-total-bar > .btn { width: 100%; }
