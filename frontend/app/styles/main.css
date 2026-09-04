@@ -2328,3 +2328,39 @@ dd { margin: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+.mesa-plano {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+.mesa-card {
+  border: 2px solid var(--line);
+  border-left: 6px solid var(--muted);
+  border-radius: 0;
+  padding: 12px;
+  background: var(--superficie);
+  display: grid;
+  gap: 6px;
+}
+.mesa-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mesa-card header strong { font-size: 16px; }
+.mesa-cap { color: var(--muted); font-size: 12px; }
+.mesa-estado { margin: 0; font-weight: 800; text-transform: uppercase; font-size: 12px; }
+.mesa-reservas-hoy { margin: 0; color: var(--muted); font-size: 12px; }
+.mesa-actions { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.mesa-actions select { min-height: 34px; flex: 1 1 auto; }
+.mesa-card.mesa-libre { border-left-color: var(--success); }
+.mesa-card.mesa-libre .mesa-estado { color: var(--success); }
+.mesa-card.mesa-ocupada { border-left-color: var(--red); }
+.mesa-card.mesa-ocupada .mesa-estado { color: var(--red); }
+.mesa-card.mesa-reservada { border-left-color: #B8860B; }
+.mesa-card.mesa-reservada .mesa-estado { color: #B8860B; }
+.mesa-card.mesa-fueradeservicio { border-left-color: var(--muted); opacity: .7; }
+.mesa-card.mesa-fueradeservicio .mesa-estado { color: var(--muted); }
+
+@media (max-width: 640px) {
+  .mesa-plano { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .mesa-actions { flex-wrap: wrap; }
+  .mesa-actions select { flex: 1 1 100%; }
+}

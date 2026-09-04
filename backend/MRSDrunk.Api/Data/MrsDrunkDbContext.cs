@@ -43,6 +43,8 @@ public sealed class MrsDrunkDbContext(DbContextOptions<MrsDrunkDbContext> option
     public DbSet<ComandaDetalle> ComandaDetalles => Set<ComandaDetalle>();
     public DbSet<ComandaDetalleEvento> ComandaDetalleEventos => Set<ComandaDetalleEvento>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
+    public DbSet<Mesa> Mesas => Set<Mesa>();
+    public DbSet<Reserva> Reservas => Set<Reserva>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
