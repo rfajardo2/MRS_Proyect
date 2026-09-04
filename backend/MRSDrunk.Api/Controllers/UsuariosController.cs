@@ -13,7 +13,7 @@ namespace MRSDrunk.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService permissionService) : ControllerBase
+public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService permissionService, IAuditoriaService auditoriaService) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("Seguridad.Usuarios.Ver")]
@@ -104,6 +104,13 @@ public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService 
         await db.SaveChangesAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.Empresa).LoadAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.Rol).LoadAsync(cancellationToken);
+
+        await auditoriaService.RegistrarAsync(
+            User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+            "Usuario", entity.Id.ToString(), "Crear",
+            $"Creo el usuario '{entity.UsuarioNombre}' con rol '{entity.Rol?.Nombre}'.",
+            cancellationToken);
+
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
     }
 
@@ -111,11 +118,14 @@ public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService 
     [RequirePermission("Seguridad.Usuarios.Editar")]
     public async Task<IActionResult> Put(int id, UpsertUsuarioRequest request, CancellationToken cancellationToken)
     {
-        var entity = await db.Usuarios.FindAsync([id], cancellationToken);
+        var entity = await db.Usuarios.Include(x => x.Rol).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entity is null)
         {
             return NotFound();
         }
+
+        var rolAnteriorId = entity.RolId;
+        var rolAnteriorNombre = entity.Rol?.Nombre;
 
         entity.EmpresaId = request.EmpresaId;
         entity.SucursalId = request.SucursalId;
@@ -144,6 +154,25 @@ public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService 
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (rolAnteriorId != entity.RolId)
+        {
+            await db.Entry(entity).Reference(x => x.Rol).LoadAsync(cancellationToken);
+            await auditoriaService.RegistrarAsync(
+                User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+                "Usuario", entity.Id.ToString(), "CambioRol",
+                $"Cambio el rol de '{entity.UsuarioNombre}' de '{rolAnteriorNombre}' a '{entity.Rol?.Nombre}'.",
+                cancellationToken);
+        }
+        else
+        {
+            await auditoriaService.RegistrarAsync(
+                User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+                "Usuario", entity.Id.ToString(), "Editar",
+                $"Edito el usuario '{entity.UsuarioNombre}'.",
+                cancellationToken);
+        }
+
         return NoContent();
     }
 
@@ -161,6 +190,13 @@ public sealed class UsuariosController(MrsDrunkDbContext db, IPermissionService 
         entity.FechaModificacion = DateTime.UtcNow;
         entity.UsuarioModificacion = User.GetUsuarioId();
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditoriaService.RegistrarAsync(
+            User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+            "Usuario", entity.Id.ToString(), entity.Estado ? "Activar" : "Desactivar",
+            $"{(entity.Estado ? "Activo" : "Desactivo")} el usuario '{entity.UsuarioNombre}'.",
+            cancellationToken);
+
         return NoContent();
     }
 

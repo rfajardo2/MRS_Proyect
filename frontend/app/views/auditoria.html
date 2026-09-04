@@ -1,0 +1,49 @@
+<section class="page" ng-controller="AuditoriaController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Auditoria</span>
+      <h2>Registro de cambios</h2>
+      <p>Quien creo, edito o elimino cada registro, con fecha y detalle.</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Filtros</h3><p>Filtra por tipo de registro afectado.</p></div>
+      <div class="input-icon">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" placeholder="Buscar en el detalle" ng-model="vm.search">
+      </div>
+    </div>
+    <div class="toolbar">
+      <select ng-model="vm.filtroEntidad" ng-change="vm.load()">
+        <option value="">Todas las entidades</option>
+        <option ng-repeat="entidad in vm.entidades" value="{{entidad}}">{{entidad}}</option>
+      </select>
+      <button class="btn ghost" type="button" ng-click="vm.load()"><i class="fa-solid fa-rotate"></i><span>Actualizar</span></button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Ultimos {{vm.registros.length}} registros</h3><p>Se muestran los mas recientes primero.</p></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Usuario</th><th>Entidad</th><th>Accion</th><th>Detalle</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="registro in vm.registros | filter:vm.search">
+            <td>{{registro.fechaCreacion | date:'dd/MM/yyyy HH:mm'}}</td>
+            <td>{{registro.usuario || ('Usuario #' + registro.usuarioId)}}</td>
+            <td>{{registro.entidad}} <span class="cell-help">#{{registro.entidadId}}</span></td>
+            <td><i ng-class="vm.iconoAccion(registro.accion)"></i> {{registro.accion}}</td>
+            <td>{{registro.detalle || '-'}}</td>
+          </tr>
+          <tr ng-if="!vm.loading && !vm.registros.length">
+            <td colspan="5">No hay registros de auditoria todavia.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

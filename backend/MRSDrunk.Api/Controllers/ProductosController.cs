@@ -6,13 +6,14 @@ using MRSDrunk.Api.DTOs;
 using MRSDrunk.Api.Helpers;
 using MRSDrunk.Api.Middleware;
 using MRSDrunk.Api.Models;
+using MRSDrunk.Api.Services;
 
 namespace MRSDrunk.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
+public sealed class ProductosController(MrsDrunkDbContext db, IAuditoriaService auditoriaService) : ControllerBase
 {
     private const int MaxCategoriaNombre = 80;
     private const int MaxCategoriaDescripcion = 250;
@@ -201,6 +202,13 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
         await db.Entry(entity).Reference(x => x.UnidadVenta).LoadAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.UnidadInventario).LoadAsync(cancellationToken);
         await db.Entry(entity).Reference(x => x.AreaPreparacion).LoadAsync(cancellationToken);
+
+        await auditoriaService.RegistrarAsync(
+            User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+            "Producto", entity.Id.ToString(), "Crear",
+            $"Creo el producto '{entity.Nombre}' (precio {entity.PrecioVenta}).",
+            cancellationToken);
+
         return Ok(ToDto(entity));
     }
 
@@ -220,9 +228,19 @@ public sealed class ProductosController(MrsDrunkDbContext db) : ControllerBase
             return BadRequest(new { message = validation });
         }
 
+        var precioAnterior = entity.PrecioVenta;
         MapProducto(entity, request);
         entity.FechaModificacion = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+
+        var detalle = precioAnterior != entity.PrecioVenta
+            ? $"Edito el producto '{entity.Nombre}' (precio {precioAnterior} -> {entity.PrecioVenta})."
+            : $"Edito el producto '{entity.Nombre}'.";
+        await auditoriaService.RegistrarAsync(
+            User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+            "Producto", entity.Id.ToString(), "Editar", detalle,
+            cancellationToken);
+
         return NoContent();
     }
 
