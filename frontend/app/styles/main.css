@@ -1963,6 +1963,10 @@ dd { margin: 0; }
   }
   .view-host { padding: 14px; }
   .topbar { padding: 12px 14px; }
+  /* Ley de Fitts: objetivos mas grandes para uso tactil bajo presion (mesero cobrando, cocina marcando comandas). */
+  .btn, .icon-btn { min-height: 44px; }
+  .icon-btn { width: 44px; }
+  .mesa-actions select { min-height: 44px; }
   .page-title, .toolbar { align-items: stretch; flex-direction: column; }
   .admin-user-filters { grid-template-columns: 1fr; }
   .payment-trace-filters { grid-template-columns: 1fr; }

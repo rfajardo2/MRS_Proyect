@@ -52,9 +52,13 @@
 
     vm.cambiarEstadoMesa = function (mesa, estado) {
       if (!vm.canEditMesa) { return warn('No tienes permiso para editar mesas.'); }
-      mesasService.cambiarEstado(mesa.id, estado).then(function () {
-        mesa.estado = estado;
-      }).catch(handleError);
+      // Actualizacion optimista (Umbral de Doherty): el select ya cambio el modelo
+      // de inmediato (ng-model), no se espera la respuesta del servidor para que se
+      // vea reflejado en el plano. Si falla, se resincroniza desde el servidor.
+      mesasService.cambiarEstado(mesa.id, estado).catch(function (err) {
+        handleError(err);
+        mesasService.list().then(function (data) { vm.mesas = data || []; });
+      });
     };
 
     vm.newMesa = function () {
@@ -123,9 +127,13 @@
 
     vm.cambiarEstadoReserva = function (reserva, estado) {
       if (!vm.canEditReserva) { return warn('No tienes permiso para editar reservas.'); }
-      reservasService.cambiarEstado(reserva.id, estado).then(function () {
-        reserva.estado = estado;
-      }).catch(handleError);
+      // Actualizacion optimista: se refleja de inmediato en la agenda y se revierte si falla.
+      var estadoAnterior = reserva.estado;
+      reserva.estado = estado;
+      reservasService.cambiarEstado(reserva.id, estado).catch(function (err) {
+        reserva.estado = estadoAnterior;
+        handleError(err);
+      });
     };
 
     function handleError(err) {
