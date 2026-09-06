@@ -14,7 +14,7 @@
   <div class="kanban-board">
     <div class="kanban-column">
       <h3>Pendientes</h3>
-      <div class="kanban-card" ng-repeat="grupo in vm.columnas.PENDIENTE">
+      <div class="kanban-card" ng-class="{'kanban-card-processing': grupo.procesando}" ng-repeat="grupo in vm.columnas.PENDIENTE">
         <div class="kanban-card-header">
           <strong>{{grupo.comandaNumero}}</strong>
           <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
@@ -23,17 +23,17 @@
         <div class="kanban-card-item" ng-repeat="item in grupo.detalles">
           <p class="kanban-card-producto">{{item.productoNombre}} x{{item.cantidad}}</p>
           <p class="kanban-card-obs" ng-if="item.observacion">Observacion: {{item.observacion}}</p>
-          <button class="btn primary" type="button" ng-if="!item.requierePreparacion" ng-click="vm.despachar(item)" ng-disabled="!vm.canGestionar">DESPACHAR (no requiere preparacion)</button>
+          <button class="btn primary" type="button" ng-if="!item.requierePreparacion" ng-click="vm.despachar(item)" ng-disabled="!vm.canGestionar || item.procesando">{{item.procesando ? 'DESPACHANDO...' : 'DESPACHAR (no requiere preparacion)'}}</button>
         </div>
         <p class="muted">Mesero: {{grupo.mesero}}</p>
-        <button class="btn primary" type="button" ng-if="grupo.tienePreparacion" ng-click="vm.tomarComanda(grupo)" ng-disabled="!vm.canGestionar">TOMAR COMANDA</button>
+        <button class="btn primary" type="button" ng-if="grupo.tienePreparacion" ng-click="vm.tomarComanda(grupo)" ng-disabled="!vm.canGestionar || grupo.procesando">{{grupo.procesando ? 'TOMANDO...' : 'TOMAR COMANDA'}}</button>
       </div>
       <p class="muted" ng-if="!vm.columnas.PENDIENTE.length">Sin pendientes</p>
     </div>
 
     <div class="kanban-column">
       <h3>En preparacion</h3>
-      <div class="kanban-card" ng-repeat="grupo in vm.columnas.EN_PREPARACION">
+      <div class="kanban-card" ng-class="{'kanban-card-processing': grupo.procesando}" ng-repeat="grupo in vm.columnas.EN_PREPARACION">
         <div class="kanban-card-header">
           <strong>{{grupo.comandaNumero}}</strong>
           <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
@@ -51,14 +51,14 @@
           </div>
         </div>
         <p class="muted">Mesero: {{grupo.mesero}}</p>
-        <button class="btn primary" type="button" ng-click="vm.marcarListoComanda(grupo)" ng-disabled="!vm.canGestionar">MARCAR LISTO</button>
+        <button class="btn primary" type="button" ng-click="vm.marcarListoComanda(grupo)" ng-disabled="!vm.canGestionar || grupo.procesando">{{grupo.procesando ? 'ACTUALIZANDO...' : 'MARCAR LISTO'}}</button>
       </div>
       <p class="muted" ng-if="!vm.columnas.EN_PREPARACION.length">Sin productos en preparacion</p>
     </div>
 
     <div class="kanban-column">
       <h3>Listos</h3>
-      <div class="kanban-card" ng-repeat="grupo in vm.columnas.LISTO">
+      <div class="kanban-card" ng-class="{'kanban-card-processing': grupo.procesando}" ng-repeat="grupo in vm.columnas.LISTO">
         <div class="kanban-card-header">
           <strong>{{grupo.comandaNumero}}</strong>
           <span class="muted">Hace {{vm.tiempoTranscurrido(grupo.fechaCreacion)}}</span>
@@ -73,7 +73,7 @@
           <span class="prep-status-badge listo" ng-if="item.estado === 'LISTO'">Listo</span>
         </div>
         <p class="muted">Mesero: {{grupo.mesero}}</p>
-        <button class="btn primary" type="button" ng-if="grupo.tieneListos" ng-click="vm.despacharComanda(grupo)" ng-disabled="!vm.canGestionar">DESPACHAR COMANDA</button>
+        <button class="btn primary" type="button" ng-if="grupo.tieneListos" ng-click="vm.despacharComanda(grupo)" ng-disabled="!vm.canGestionar || grupo.procesando">{{grupo.procesando ? 'DESPACHANDO...' : 'DESPACHAR COMANDA'}}</button>
       </div>
       <p class="muted" ng-if="!vm.columnas.LISTO.length">Sin productos listos</p>
     </div>

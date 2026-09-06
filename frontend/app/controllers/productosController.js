@@ -64,8 +64,30 @@
       $location.path('/productos');
     };
 
+    // Ley de Miller: no renderizar la carta completa de una (puede pasar de
+    // 50 productos); paginar reduce la carga cognitiva de escanear la lista.
+    vm.productPage = 1;
+    vm.productPageSize = 15;
+
     vm.clearFilters = function () {
       vm.filters = { search: '', estado: '', categoriaId: '', soloInventario: false };
+      vm.productPage = 1;
+    };
+
+    vm.productTotalPages = function () {
+      return Math.max(1, Math.ceil(vm.filteredProductos().length / vm.productPageSize));
+    };
+
+    vm.pagedProductos = function () {
+      var all = vm.filteredProductos();
+      var totalPages = vm.productTotalPages();
+      if (vm.productPage > totalPages) { vm.productPage = totalPages; }
+      var start = (vm.productPage - 1) * vm.productPageSize;
+      return all.slice(start, start + vm.productPageSize);
+    };
+
+    vm.goToProductPage = function (page) {
+      vm.productPage = Math.min(Math.max(1, page), vm.productTotalPages());
     };
 
     vm.filteredCategorias = function () {
@@ -295,16 +317,27 @@
       });
     };
 
+    // Ley de Postel: acepta coma o punto como separador decimal al pegar
+    // precios (el usuario puede pegar "18.000" o "18000,50" sin que falle),
+    // pero lo que se envia al backend siempre queda normalizado a Number.
+    function parseDecimal(value) {
+      if (value === '' || value === undefined || value === null) { return null; }
+      var normalized = String(value).trim().replace(',', '.');
+      var parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    }
+
     function parseImport(text) {
       var lines = (text || '').split(/\r?\n/).map(function (line) { return line.trim(); }).filter(Boolean);
       if (lines.length < 2) { return []; }
+      var delimiter = lines[0].indexOf(';') >= 0 ? ';' : ',';
       return lines.slice(1).map(function (line) {
-        var cols = line.split(line.indexOf(';') >= 0 ? ';' : ',').map(function (value) { return value.trim(); });
+        var cols = line.split(delimiter).map(function (value) { return value.trim(); });
         return {
           categoria: cols[0],
           nombre: cols[1],
-          precio: Number(cols[2] || 0),
-          costo: cols[3] === '' || cols[3] === undefined ? null : Number(cols[3]),
+          precio: parseDecimal(cols[2]) || 0,
+          costo: cols[3] === '' || cols[3] === undefined ? null : parseDecimal(cols[3]),
           controlaInventario: String(cols[4] || 'true').toLowerCase() !== 'false',
           descripcion: cols[5] || null
         };

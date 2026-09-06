@@ -69,6 +69,7 @@
                   ng-click="layout.go(ventana.ruta)">
             <i class="fa-solid {{ventana.icono}}"></i>
             <span>{{ventana.nombre}}</span>
+            <span class="sidebar-badge" ng-if="layout.pendienteCount(ventana.ruta) > 0">{{layout.pendienteCount(ventana.ruta)}}</span>
           </button>
           </div>
         </section>
@@ -116,6 +117,10 @@
   <script src="app/services/empresasService.js"></script>
   <script src="app/services/nominaService.js"></script>
   <script src="app/services/sesionesService.js"></script>
+  <script src="app/services/auditoriaService.js"></script>
+  <script src="app/services/mesasService.js"></script>
+  <script src="app/services/reservasService.js"></script>
+  <script src="app/services/pendientesService.js"></script>
   <script src="app/services/configuracionService.js"></script>
   <script src="app/services/productosService.js"></script>
   <script src="app/services/inventarioService.js"></script>
@@ -126,6 +131,7 @@
   <script src="app/services/seguimientoPublicoService.js"></script>
   <script src="app/services/seguimientoRealtimeService.js"></script>
   <script src="app/services/swalTheme.js"></script>
+  <script src="app/filters/payuFilters.js"></script>
   <script src="app/controllers/loginController.js"></script>
   <script src="app/controllers/inicioController.js"></script>
   <script src="app/controllers/menuPublicoController.js"></script>
@@ -140,6 +146,8 @@
   <script src="app/controllers/empresasController.js"></script>
   <script src="app/controllers/nominaController.js"></script>
   <script src="app/controllers/sesionesController.js"></script>
+  <script src="app/controllers/auditoriaController.js"></script>
+  <script src="app/controllers/reservasController.js"></script>
   <script src="app/controllers/configuracionVentasController.js"></script>
   <script src="app/controllers/productosController.js"></script>
   <script src="app/controllers/inventarioController.js"></script>

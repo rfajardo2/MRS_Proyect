@@ -30,6 +30,7 @@
                 ng-click="layout.go(ventana.ruta)">
           <i class="fa-solid {{ventana.icono}}"></i>
           <span>{{ventana.nombre}}</span>
+          <span class="sidebar-badge" ng-if="layout.pendienteCount(ventana.ruta) > 0">{{layout.pendienteCount(ventana.ruta)}}</span>
         </button>
       </section>
     </nav>

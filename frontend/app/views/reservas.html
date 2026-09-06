@@ -1,0 +1,133 @@
+<section class="page" ng-controller="ReservasController as vm">
+  <div class="page-title">
+    <div>
+      <span class="eyebrow">Reservas</span>
+      <h2>Plano y reservas</h2>
+      <p>Estado de las mesas en tiempo real y agenda de reservas del dia.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn ghost" type="button" ng-click="vm.newMesa()" ng-if="vm.canCreateMesa"><i class="fa-solid fa-square-plus"></i><span>Nueva mesa</span></button>
+      <button class="btn primary" type="button" ng-click="vm.newReserva()" ng-if="vm.canCreateReserva"><i class="fa-solid fa-calendar-plus"></i><span>Nueva reserva</span></button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Plano de mesas</h3><p>Haz clic en una mesa para cambiar su estado.</p></div>
+    </div>
+    <div class="mesa-plano">
+      <article class="mesa-card mesa-{{mesa.estado | lowercase}}" ng-repeat="mesa in vm.mesas" ng-if="mesa.activa">
+        <header>
+          <i class="mesa-estado-icono fa-solid" ng-class="vm.iconoEstadoMesa(mesa.estado)" aria-hidden="true"></i>
+          <strong>{{mesa.nombre}}</strong>
+          <span class="mesa-cap"><i class="fa-solid fa-user-group"></i> {{mesa.capacidad}}</span>
+        </header>
+        <p class="mesa-estado">{{mesa.estado}}</p>
+        <p class="mesa-reservas-hoy" ng-if="vm.reservasDeMesa(mesa.id).length">
+          <i class="fa-solid fa-clock"></i> {{vm.reservasDeMesa(mesa.id).length}} reserva(s) activa(s)
+        </p>
+        <div class="mesa-actions">
+          <select ng-model="mesa.estado" ng-change="vm.cambiarEstadoMesa(mesa, mesa.estado)" ng-if="vm.canEditMesa" ng-click="$event.stopPropagation()">
+            <option ng-repeat="estado in vm.estadosMesa" value="{{estado}}">{{estado}}</option>
+          </select>
+          <button class="icon-btn" type="button" ng-click="vm.newReserva(mesa)" ng-if="vm.canCreateReserva" title="Reservar"><i class="fa-solid fa-calendar-plus"></i></button>
+          <button class="icon-btn" type="button" ng-click="vm.editMesa(mesa)" ng-if="vm.canEditMesa" title="Editar mesa"><i class="fa-solid fa-pen"></i></button>
+        </div>
+      </article>
+      <p class="muted" ng-if="!vm.mesas.length">No hay mesas creadas todavia.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><h3>Agenda de reservas</h3><p>Reservas del dia seleccionado.</p></div>
+      <div class="input-icon">
+        <input type="date" ng-model="vm.filtroFecha" ng-change="vm.loadReservas()">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Hora</th><th>Mesa</th><th>Cliente</th><th>Telefono</th><th>Personas</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="reserva in vm.reservas">
+            <td>{{reserva.fechaHora | date:'HH:mm'}}<span class="cell-help">{{reserva.duracionMinutos}} min</span></td>
+            <td>{{reserva.mesa}}</td>
+            <td>{{reserva.cliente}}</td>
+            <td>{{reserva.telefono || '-'}}</td>
+            <td>{{reserva.numeroPersonas}}</td>
+            <td>
+              <span class="status" ng-class="{off: reserva.estado === 'Cancelada' || reserva.estado === 'NoShow'}">{{reserva.estado}}</span>
+            </td>
+            <td class="actions">
+              <button class="icon-btn" type="button" ng-click="vm.editReserva(reserva)" ng-if="vm.canEditReserva" title="Editar"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn" type="button" ng-click="vm.cambiarEstadoReserva(reserva, 'Confirmada')" ng-if="vm.canEditReserva && reserva.estado === 'Pendiente'" title="Confirmar"><i class="fa-solid fa-check"></i></button>
+              <button class="icon-btn" type="button" ng-click="vm.cambiarEstadoReserva(reserva, 'Completada')" ng-if="vm.canEditReserva && reserva.estado === 'Confirmada'" title="Marcar completada"><i class="fa-solid fa-flag-checkered"></i></button>
+              <button class="icon-btn" type="button" ng-click="vm.cambiarEstadoReserva(reserva, 'Cancelada')" ng-if="vm.canEditReserva && (reserva.estado === 'Pendiente' || reserva.estado === 'Confirmada')" title="Cancelar"><i class="fa-solid fa-xmark"></i></button>
+            </td>
+          </tr>
+          <tr ng-if="!vm.reservas.length">
+            <td colspan="7">No hay reservas para esta fecha.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" ng-if="vm.mesaModal">
+    <form name="mesaForm" class="modal" ng-submit="vm.saveMesa(mesaForm)" novalidate>
+      <div class="modal-head">
+        <h3>{{vm.mesaForm.id ? 'Editar mesa' : 'Nueva mesa'}}</h3>
+        <button type="button" class="icon-btn" ng-click="vm.mesaModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="form-grid">
+        <label>Nombre
+          <input name="nombre" ng-model="vm.mesaForm.nombre" maxlength="40" required placeholder="Ej: Mesa 5">
+        </label>
+        <label>Capacidad
+          <input name="capacidad" type="number" min="1" step="1" ng-model="vm.mesaForm.capacidad" required>
+        </label>
+        <label class="check"><input type="checkbox" ng-model="vm.mesaForm.activa"> Activa</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.mesaModal=false">Cancelar</button>
+        <button class="btn primary" type="submit" ng-disabled="vm.saving">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.reservaModal">
+    <form name="reservaForm" class="modal" ng-submit="vm.saveReserva(reservaForm)" novalidate>
+      <div class="modal-head">
+        <h3>{{vm.reservaForm.id ? 'Editar reserva' : 'Nueva reserva'}}</h3>
+        <button type="button" class="icon-btn" ng-click="vm.reservaModal=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="form-grid">
+        <label>Mesa
+          <select name="mesaId" ng-model="vm.reservaForm.mesaId" ng-options="m.id as m.nombre for m in vm.mesas" required></select>
+        </label>
+        <label>Cliente
+          <input name="cliente" ng-model="vm.reservaForm.cliente" maxlength="120" required placeholder="Nombre del cliente">
+        </label>
+        <label>Telefono
+          <input ng-model="vm.reservaForm.telefono" maxlength="30" placeholder="Opcional">
+        </label>
+        <label>Personas
+          <input type="number" min="1" step="1" ng-model="vm.reservaForm.numeroPersonas" required>
+        </label>
+        <label>Fecha y hora
+          <input name="fechaHora" type="datetime-local" ng-model="vm.reservaForm.fechaHora" required>
+        </label>
+        <label>Duracion (minutos)
+          <input type="number" min="15" step="15" ng-model="vm.reservaForm.duracionMinutos" required>
+        </label>
+        <label class="wide">Observacion
+          <input ng-model="vm.reservaForm.observacion" maxlength="250" placeholder="Opcional">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" ng-click="vm.reservaModal=false">Cancelar</button>
+        <button class="btn primary" type="submit" ng-disabled="vm.saving">Guardar</button>
+      </div>
+    </form>
+  </div>
+</section>

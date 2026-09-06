@@ -68,16 +68,26 @@
       return orden.map(function (id) { return grupos[id]; });
     }
 
+    // Umbral de Doherty: el tablero de cocina/barra se usa bajo presion, con
+    // varias comandas a la vez. En vez de esperar el round-trip completo (que
+    // ademas dispara un refetch de tablero + historial) antes de dar cualquier
+    // senal, la tarjeta se marca "procesando" al instante del clic para que el
+    // usuario sepa que su accion ya se registro, no que el boton no respondio.
     vm.tomarComanda = function (grupo) {
-      if (!vm.canGestionar) { return; }
+      if (!vm.canGestionar || grupo.procesando) { return; }
+      grupo.procesando = true;
       comandasService.tomarComanda(grupo.comandaId).then(function () {
         showSuccess('Comanda tomada');
         vm.actualizar();
-      }).catch(handleError);
+      }).catch(function (err) {
+        grupo.procesando = false;
+        handleError(err);
+      });
     };
 
     vm.marcarListoComanda = function (grupo) {
-      if (!vm.canGestionar) { return; }
+      if (!vm.canGestionar || grupo.procesando) { return; }
+      grupo.procesando = true;
       var detallesNoPreparar = grupo.detalles
         .filter(function (item) { return !item.preparar; })
         .map(function (item) { return item.id; });
@@ -85,23 +95,34 @@
       comandasService.marcarListoComanda(grupo.comandaId, { detallesNoPreparar: detallesNoPreparar }).then(function () {
         showSuccess('Comanda actualizada');
         vm.actualizar();
-      }).catch(handleError);
+      }).catch(function (err) {
+        grupo.procesando = false;
+        handleError(err);
+      });
     };
 
     vm.despacharComanda = function (grupo) {
-      if (!vm.canGestionar) { return; }
+      if (!vm.canGestionar || grupo.procesando) { return; }
+      grupo.procesando = true;
       comandasService.despacharComanda(grupo.comandaId).then(function () {
         showSuccess('Comanda despachada');
         vm.actualizar();
-      }).catch(handleError);
+      }).catch(function (err) {
+        grupo.procesando = false;
+        handleError(err);
+      });
     };
 
     vm.despachar = function (item) {
-      if (!vm.canGestionar) { return; }
+      if (!vm.canGestionar || item.procesando) { return; }
+      item.procesando = true;
       comandasService.despachar(item.id).then(function () {
         showSuccess('Producto despachado');
         vm.actualizar();
-      }).catch(handleError);
+      }).catch(function (err) {
+        item.procesando = false;
+        handleError(err);
+      });
     };
 
     vm.tiempoTranscurrido = function (fecha) {

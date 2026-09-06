@@ -3,15 +3,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MRSDrunk.Api.Data;
 using MRSDrunk.Api.DTOs;
+using MRSDrunk.Api.Helpers;
 using MRSDrunk.Api.Middleware;
 using MRSDrunk.Api.Models;
+using MRSDrunk.Api.Services;
 
 namespace MRSDrunk.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public sealed class PermisosController(MrsDrunkDbContext db) : ControllerBase
+public sealed class PermisosController(MrsDrunkDbContext db, IAuditoriaService auditoriaService) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("Seguridad.Permisos.Ver")]
@@ -106,6 +108,13 @@ public sealed class PermisosController(MrsDrunkDbContext db) : ControllerBase
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditoriaService.RegistrarAsync(
+            User.GetEmpresaId(), User.GetSucursalId(), User.GetUsuarioId(),
+            "Rol", rolId.ToString(), "EditarPermisos",
+            $"Actualizo {request.Permisos.Count} permiso(s) del rol '{role.Nombre}'.",
+            cancellationToken);
+
         return NoContent();
     }
 

@@ -107,6 +107,12 @@
       .when('/preparacion', {
         templateUrl: 'app/views/preparacion.html'
       })
+      .when('/auditoria', {
+        templateUrl: 'app/views/auditoria.html'
+      })
+      .when('/reservas', {
+        templateUrl: 'app/views/reservas.html'
+      })
       .when('/admin-cuentas', {
         templateUrl: 'app/views/admin-cuentas.html'
       })

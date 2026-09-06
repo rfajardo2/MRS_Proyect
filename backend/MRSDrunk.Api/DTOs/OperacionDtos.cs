@@ -58,6 +58,16 @@ public sealed record ProductoDto(
     string? AreaPreparacion,
     bool RequierePreparacion);
 
+// DTO reducido para el menu publico (anonimo): expone solo lo que un
+// visitante sin autenticar debe ver. No incluye CostoEstimado ni datos
+// operativos internos (unidades, area de preparacion, etc.).
+public sealed record ProductoMenuPublicoDto(
+    int Id,
+    string Categoria,
+    string Nombre,
+    string? Descripcion,
+    decimal PrecioVenta);
+
 public sealed record UpsertProductoRequest(
     int CategoriaId,
     string Nombre,

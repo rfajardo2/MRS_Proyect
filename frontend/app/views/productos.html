@@ -47,18 +47,18 @@
   </div>
 
   <div class="toolbar product-toolbar">
-    <input ng-model="vm.filters.search" placeholder="{{vm.mode === 'categorias' ? 'Buscar categoria' : 'Buscar producto, categoria o descripcion'}}">
-    <select ng-model="vm.filters.estado">
+    <input ng-model="vm.filters.search" ng-change="vm.productPage=1" placeholder="{{vm.mode === 'categorias' ? 'Buscar categoria' : 'Buscar producto, categoria o descripcion'}}">
+    <select ng-model="vm.filters.estado" ng-change="vm.productPage=1">
       <option value="">Todos los estados</option>
       <option value="true">Activos</option>
       <option value="false">Inactivos</option>
     </select>
-    <select ng-model="vm.filters.categoriaId" ng-if="vm.mode === 'productos'">
+    <select ng-model="vm.filters.categoriaId" ng-change="vm.productPage=1" ng-if="vm.mode === 'productos'">
       <option value="">Todas las categorias</option>
       <option ng-repeat="cat in vm.categorias" value="{{cat.id}}">{{cat.nombre}}</option>
     </select>
     <label class="check compact" ng-if="vm.mode === 'productos'">
-      <input type="checkbox" ng-model="vm.filters.soloInventario"> Solo inventario
+      <input type="checkbox" ng-model="vm.filters.soloInventario" ng-change="vm.productPage=1"> Solo inventario
     </label>
     <button class="btn ghost" type="button" ng-click="vm.clearFilters()">
       <i class="fa-solid fa-filter-circle-xmark"></i><span>Limpiar</span>
@@ -126,7 +126,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr ng-repeat="prod in vm.filteredProductos()" ng-class="{muted: !prod.estado}">
+          <tr ng-repeat="prod in vm.pagedProductos()" ng-class="{muted: !prod.estado}">
             <td>{{prod.categoria}}</td>
             <td>
               <strong>{{prod.nombre}}</strong>
@@ -150,6 +150,11 @@
           <tr ng-if="!vm.filteredProductos().length"><td colspan="9">No hay productos para los filtros seleccionados.</td></tr>
         </tbody>
       </table>
+    </div>
+    <div class="pagination" ng-if="vm.productTotalPages() > 1">
+      <button class="icon-btn" type="button" ng-click="vm.goToProductPage(vm.productPage - 1)" ng-disabled="vm.productPage <= 1"><i class="fa-solid fa-chevron-left"></i></button>
+      <span>Pagina {{vm.productPage}} de {{vm.productTotalPages()}}</span>
+      <button class="icon-btn" type="button" ng-click="vm.goToProductPage(vm.productPage + 1)" ng-disabled="vm.productPage >= vm.productTotalPages()"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
   </div>
 
