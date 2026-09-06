@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  angular.module('mrsDrunkApp').controller('LayoutController', function ($scope, $rootScope, $location, $window, authService, menuService) {
+  angular.module('mrsDrunkApp').controller('LayoutController', function ($scope, $rootScope, $location, $window, $interval, authService, menuService, pendientesService) {
     var layout = this;
     layout.user = authService.getUser();
     layout.menu = [];
@@ -9,6 +9,34 @@
     layout.sidebarOpen = false;
     layout.menuLoaded = false;
     layout.moduleOpen = {};
+    layout.pendientes = { cuentasAbiertas: 0, comandasPendientes: 0, reservasHoySinConfirmar: 0 };
+
+    // Efecto Zeigarnik: contadores de pendientes visibles en todo momento en
+    // el sidebar, no solo dentro de cada pantalla, para que no se olvide una
+    // cuenta abierta o una comanda sin despachar al final del turno.
+    var pendientesPorRuta = {
+      '/operacion/cuentas': 'cuentasAbiertas',
+      '/preparacion': 'comandasPendientes',
+      '/reservas': 'reservasHoySinConfirmar'
+    };
+
+    layout.pendienteCount = function (ruta) {
+      var campo = pendientesPorRuta[ruta];
+      return campo ? (layout.pendientes[campo] || 0) : 0;
+    };
+
+    layout.loadPendientes = function () {
+      if (!authService.isAuthenticated()) {
+        return;
+      }
+
+      pendientesService.resumen().then(function (data) {
+        layout.pendientes = data;
+      }).catch(function () {
+        // Silencioso: el badge de pendientes es informativo, no debe
+        // interrumpir al usuario si esta llamada puntual falla.
+      });
+    };
 
     layout.isAuthenticated = function () {
       return authService.isAuthenticated();
@@ -93,8 +121,15 @@
     $rootScope.$on('$routeChangeSuccess', function () {
       layout.loadMenu();
       layout.openActiveModule();
+      layout.loadPendientes();
+    });
+
+    var pendientesInterval = $interval(layout.loadPendientes, 60000);
+    $scope.$on('$destroy', function () {
+      $interval.cancel(pendientesInterval);
     });
 
     layout.loadMenu();
+    layout.loadPendientes();
   });
 })();

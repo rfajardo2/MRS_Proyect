@@ -18,6 +18,7 @@
     <div class="mesa-plano">
       <article class="mesa-card mesa-{{mesa.estado | lowercase}}" ng-repeat="mesa in vm.mesas" ng-if="mesa.activa">
         <header>
+          <i class="mesa-estado-icono fa-solid" ng-class="vm.iconoEstadoMesa(mesa.estado)" aria-hidden="true"></i>
           <strong>{{mesa.nombre}}</strong>
           <span class="mesa-cap"><i class="fa-solid fa-user-group"></i> {{mesa.capacidad}}</span>
         </header>

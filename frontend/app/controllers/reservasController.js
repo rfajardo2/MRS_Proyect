@@ -44,6 +44,18 @@
       return 'mesa-card mesa-' + (mesa.estado || 'Libre').toLowerCase();
     };
 
+    var iconosEstadoMesa = {
+      Libre: 'fa-circle-check',
+      Ocupada: 'fa-utensils',
+      Reservada: 'fa-clock',
+      FueraDeServicio: 'fa-ban'
+    };
+    // Ley de Pragnanz: un icono grande y distinto por estado se lee de un
+    // vistazo desde lejos, algo que el color solo (o texto pequeno) no logra.
+    vm.iconoEstadoMesa = function (estado) {
+      return iconosEstadoMesa[estado] || 'fa-circle-question';
+    };
+
     vm.reservasDeMesa = function (mesaId) {
       return vm.reservas.filter(function (r) {
         return r.mesaId === mesaId && (r.estado === 'Pendiente' || r.estado === 'Confirmada');

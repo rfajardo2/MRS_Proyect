@@ -130,7 +130,7 @@
         <tbody>
           <tr ng-repeat="item in vm.orphans">
             <td>{{item.fechaRecepcion | date:'short'}}</td>
-            <td>{{item.referencia}}</td>
+            <td title="{{item.referencia}}">{{item.referencia | payuReferencia}}</td>
             <td>{{item.cuentaNumero || '-'}}</td>
             <td>{{item.usuario || '-'}}</td>
             <td><span class="status-chip" ng-class="vm.statusClass(item.estadoRecibido)">{{item.estadoRecibido || 'SIN ESTADO'}}</span></td>
@@ -170,7 +170,7 @@
             </td>
             <td>
               <strong>{{payment.cuentaNumero}}</strong>
-              <small class="muted block">{{payment.referencia}}</small>
+              <small class="muted block" title="{{payment.referencia}}">{{payment.referencia | payuReferencia}}</small>
             </td>
             <td>{{payment.mesero}}</td>
             <td>{{payment.mesa || '-'}}</td>
@@ -226,7 +226,7 @@
                 <div ng-if="vm.details[payment.id]">
                   <div class="section-header">
                     <div>
-                      <strong>Intento {{vm.details[payment.id].payment.referencia}}</strong>
+                      <strong title="{{vm.details[payment.id].payment.referencia}}">Intento {{vm.details[payment.id].payment.referencia | payuReferencia}}</strong>
                       <small>Creado {{vm.details[payment.id].payment.fechaCreacion | date:'short'}} · Cuenta {{vm.details[payment.id].payment.cuentaNumero}}</small>
                     </div>
                     <div class="inline-actions">
@@ -306,7 +306,7 @@
                           <td>{{duplicate.metodoPago}}</td>
                           <td>{{duplicate.valor | currency:'$':0}}</td>
                           <td>{{duplicate.valorPropina | currency:'$':0}}</td>
-                          <td>{{duplicate.referencia || '-'}}</td>
+                          <td>{{(duplicate.referencia | payuReferencia) || '-'}}</td>
                           <td>{{duplicate.fechaPago | date:'short'}}</td>
                           <td>
                             <span class="tiny-badge" ng-class="duplicate.esCanonico ? 'ok' : 'danger'">
@@ -348,7 +348,7 @@
                           <td>{{pagoCuenta.valor | currency:'$':0}}</td>
                           <td>{{pagoCuenta.valorPropina | currency:'$':0}}</td>
                           <td>{{pagoCuenta.valorAplicadoCuenta | currency:'$':0}}</td>
-                          <td>{{pagoCuenta.referencia || '-'}}</td>
+                          <td>{{(pagoCuenta.referencia | payuReferencia) || '-'}}</td>
                           <td>{{pagoCuenta.fechaPago | date:'short'}}</td>
                         </tr>
                         <tr ng-if="!vm.details[payment.id].cuenta.pagos.length"><td colspan="6" class="muted">Sin pagos aplicados</td></tr>
